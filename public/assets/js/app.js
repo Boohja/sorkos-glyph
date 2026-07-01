@@ -24,6 +24,17 @@
   var state = loadState();
   render();
 
+  document.addEventListener('click', function (event) {
+    if (!tool.contains(event.target)) {
+      closeGuestPopovers();
+      return;
+    }
+
+    if (!event.target.closest('.detail-badge') && !event.target.closest('.icon-popover')) {
+      closeGuestPopovers();
+    }
+  });
+
   dropzone.addEventListener('dragover', function (event) {
     event.preventDefault();
     dropzone.classList.add('is-dragover');
@@ -76,7 +87,7 @@
       }
 
       return navigator.clipboard.writeText(sprite).then(function () {
-        setStatus('Sprite copied.');
+        flashCopyButton(actions.copySprite, 'Copied');
       });
     }).catch(function () {
       setStatus('Copy failed. Your browser may require HTTPS clipboard permission.', true);
@@ -85,7 +96,7 @@
 
   actions.copyUsage.addEventListener('click', function () {
     navigator.clipboard.writeText(usageSnippet.textContent).then(function () {
-      setStatus('Usage snippet copied.');
+      flashCopyButton(actions.copyUsage, 'Copied');
     }).catch(function () {
       setStatus('Copy failed. Your browser may require HTTPS clipboard permission.', true);
     });
@@ -155,75 +166,118 @@
     emptyState.hidden = hasIcons;
     actions.download.disabled = !hasIcons;
     actions.copySprite.disabled = !hasIcons;
-    actions.copyUsage.disabled = !hasIcons;
+    actions.copyUsage.disabled = false;
     actions.clear.disabled = !hasIcons;
 
     state.icons.forEach(function (icon, index) {
-      var card = document.createElement('article');
-      card.className = 'icon-card';
-
-      var preview = document.createElement('div');
-      preview.className = 'icon-preview';
-      preview.setAttribute('aria-hidden', 'true');
-      preview.innerHTML = '<svg viewBox="' + escapeAttribute(icon.viewBox) + '">' + icon.symbol_markup + '</svg>';
-
-      var meta = document.createElement('div');
-      meta.className = 'icon-meta';
-
-      var filename = document.createElement('small');
-      filename.textContent = icon.filename || 'icon.svg';
-
-      var input = document.createElement('input');
-      input.className = 'symbol-input';
-      input.value = icon.symbol_id;
-      input.setAttribute('aria-label', 'Symbol ID for ' + (icon.filename || 'icon'));
-      input.addEventListener('input', function () {
-        icon.symbol_id = slugSymbolId(input.value);
-        input.value = icon.symbol_id;
-        saveState();
-        updateUsageSnippet();
-      });
-
-      var remove = document.createElement('button');
-      remove.className = 'button button-secondary';
-      remove.type = 'button';
-      remove.textContent = 'Remove';
-      remove.addEventListener('click', function () {
-        state.icons.splice(index, 1);
-        saveState();
-        render();
-        setStatus('Icon removed.');
-      });
-
-      meta.appendChild(filename);
-      meta.appendChild(input);
-
-      card.appendChild(preview);
-      card.appendChild(meta);
-
-      if (Array.isArray(icon.notes) && icon.notes.length) {
-        var notes = document.createElement('div');
-        notes.className = 'notes';
-        notes.innerHTML = '<strong>Cleanup notes</strong><ul>' + icon.notes.map(function (note) {
-          return '<li>' + escapeHtml(note) + '</li>';
-        }).join('') + '</ul>';
-        card.appendChild(notes);
-      }
-
-      if (Array.isArray(icon.warnings) && icon.warnings.length) {
-        var warnings = document.createElement('div');
-        warnings.className = 'warnings';
-        warnings.innerHTML = '<strong>Warnings</strong><ul>' + icon.warnings.map(function (warning) {
-          return '<li>' + escapeHtml(warning) + '</li>';
-        }).join('') + '</ul>';
-        card.appendChild(warnings);
-      }
-
-      card.appendChild(remove);
-      grid.appendChild(card);
+      grid.appendChild(createGuestIconCard(icon, index));
     });
 
     updateUsageSnippet();
+  }
+
+  function createGuestIconCard(icon, index) {
+    var card = document.createElement('article');
+    var preview = document.createElement('div');
+
+    card.className = 'saved-icon-card guest-icon-card';
+    preview.className = 'icon-preview';
+    preview.setAttribute('aria-hidden', 'true');
+    preview.innerHTML = '<svg viewBox="' + escapeAttribute(icon.viewBox) + '">' + icon.symbol_markup + '</svg>';
+
+    card.appendChild(preview);
+    appendGuestIconDetails(card, icon, index);
+    card.appendChild(createGuestIconForm(icon, index));
+
+    return card;
+  }
+
+  function appendGuestIconDetails(card, icon, index) {
+    var messages = visibleIconMessages(icon);
+
+    if (!messages.length) {
+      return;
+    }
+
+    var detailsButton = document.createElement('button');
+    var popover = document.createElement('div');
+    var popoverId = 'guest-icon-details-' + index;
+
+    detailsButton.className = 'detail-badge' + (Array.isArray(icon.warnings) && icon.warnings.length ? ' has-warnings' : '');
+    detailsButton.type = 'button';
+    detailsButton.textContent = String(messages.length);
+    detailsButton.setAttribute('aria-label', messages.length + ' cleanup detail' + (messages.length === 1 ? '' : 's') + ' for ' + (icon.filename || 'icon'));
+    detailsButton.setAttribute('aria-expanded', 'false');
+    detailsButton.setAttribute('aria-controls', popoverId);
+
+    popover.className = 'icon-popover';
+    popover.id = popoverId;
+    popover.hidden = true;
+    popover.innerHTML = '<strong>Details</strong><ul>' + messages.map(function (message) {
+      return '<li>' + escapeHtml(message) + '</li>';
+    }).join('') + '</ul>';
+
+    detailsButton.addEventListener('click', function (event) {
+      event.stopPropagation();
+      var isOpen = !popover.hidden;
+      closeGuestPopovers();
+      popover.hidden = isOpen;
+      detailsButton.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+    });
+
+    card.appendChild(detailsButton);
+    card.appendChild(popover);
+  }
+
+  function createGuestIconForm(icon, index) {
+    var form = document.createElement('form');
+    var label = document.createElement('label');
+    var labelText = document.createElement('span');
+    var input = document.createElement('input');
+    var rowActions = document.createElement('div');
+    var remove = document.createElement('button');
+
+    form.className = 'saved-icon-form';
+    form.addEventListener('submit', function (event) {
+      event.preventDefault();
+    });
+
+    labelText.className = 'visually-hidden';
+    labelText.textContent = 'Symbol ID';
+
+    input.name = 'symbol_id';
+    input.value = icon.symbol_id;
+    input.required = true;
+    input.pattern = '[a-z][a-z0-9_-]{0,119}';
+    input.setAttribute('aria-label', 'Symbol ID for ' + (icon.filename || 'icon'));
+    input.addEventListener('input', function () {
+      icon.symbol_id = slugSymbolId(input.value);
+      input.value = icon.symbol_id;
+      saveState();
+      updateUsageSnippet();
+    });
+
+    rowActions.className = 'row-actions';
+
+    remove.className = 'button button-plain icon-delete';
+    remove.type = 'button';
+    remove.textContent = '\u00d7';
+    remove.title = 'Delete';
+    remove.setAttribute('aria-label', 'Delete ' + (icon.symbol_id || icon.filename || 'icon'));
+    remove.addEventListener('click', function () {
+      state.icons.splice(index, 1);
+      saveState();
+      render();
+      setStatus('Icon removed.');
+    });
+
+    label.appendChild(labelText);
+    label.appendChild(input);
+    rowActions.appendChild(remove);
+    form.appendChild(label);
+    form.appendChild(rowActions);
+
+    return form;
   }
 
   function buildSprite() {
@@ -287,14 +341,30 @@
   }
 
   function setStatus(message, isError) {
+    window.clearTimeout(setStatus.clearTimer);
     statusLine.textContent = message || '';
     statusLine.classList.toggle('is-error', Boolean(isError));
+
+    if (message && !isError) {
+      setStatus.clearTimer = window.setTimeout(function () {
+        statusLine.textContent = '';
+      }, 3200);
+    }
   }
 
   function showDownloadFallback(sprite) {
     var href = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(sprite);
     downloadFallback.hidden = false;
     downloadFallback.innerHTML = '<a class="button button-secondary" download="sprite.svg" href="' + href + '">Download ready sprite</a>';
+  }
+
+  function flashCopyButton(button, message) {
+    var label = button.getAttribute('data-copy-label') || button.textContent;
+    button.textContent = message;
+    window.clearTimeout(button._glyphCopyTimer);
+    button._glyphCopyTimer = window.setTimeout(function () {
+      button.textContent = label;
+    }, 2200);
   }
 
   function errorMessage(data) {
@@ -334,6 +404,29 @@
 
   function escapeAttribute(value) {
     return escapeHtml(value).replace(/`/g, '&#096;');
+  }
+
+  function closeGuestPopovers() {
+    tool.querySelectorAll('.guest-icon-card .icon-popover').forEach(function (popover) {
+      popover.hidden = true;
+    });
+
+    tool.querySelectorAll('.guest-icon-card .detail-badge').forEach(function (button) {
+      button.setAttribute('aria-expanded', 'false');
+    });
+  }
+
+  function visibleIconMessages(icon) {
+    var hiddenMessages = [
+      'Removed fixed width and height so the symbol scales through viewBox.',
+      'Removed fixed width and height. The icon now scales through viewBox.',
+      'Root SVG had no title or desc.',
+      'Converted icon colors to currentColor.'
+    ];
+
+    return unique([].concat(icon.warnings || [], icon.notes || []).filter(function (message) {
+      return hiddenMessages.indexOf(message) === -1;
+    }));
   }
 
   function migrateIconMessages(icon) {
@@ -386,6 +479,63 @@
 })();
 
 (function () {
+  document.addEventListener('click', function (event) {
+    document.querySelectorAll('.account-menu[open]').forEach(function (menu) {
+      if (!menu.contains(event.target)) {
+        menu.removeAttribute('open');
+      }
+    });
+  });
+
+  document.querySelectorAll('.account-menu').forEach(function (menu) {
+    menu.addEventListener('toggle', function () {
+      if (!menu.open) {
+        return;
+      }
+
+      document.querySelectorAll('.account-menu[open]').forEach(function (otherMenu) {
+        if (otherMenu !== menu) {
+          otherMenu.removeAttribute('open');
+        }
+      });
+    });
+  });
+
+  var kofiAnchor = document.querySelector('[data-kofi-anchor]');
+
+  if (!kofiAnchor || !window.kofiWidgetOverlay) {
+    return;
+  }
+
+  window.kofiWidgetOverlay.draw('boohja', {
+    type: 'floating-chat',
+    'floating-chat.donateButton.text': 'Support me',
+    'floating-chat.donateButton.background-color': '#00b9fe',
+    'floating-chat.donateButton.text-color': '#fff'
+  });
+
+  dockKofiWidget();
+
+  var observer = new MutationObserver(dockKofiWidget);
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  function dockKofiWidget() {
+    var widget = document.querySelector('.floatingchat-container-wrap');
+
+    if (!widget || kofiAnchor.contains(widget)) {
+      return;
+    }
+
+    widget.classList.add('kofi-docked');
+    kofiAnchor.appendChild(widget);
+    var fallback = kofiAnchor.querySelector('.kofi-fallback');
+    if (fallback) {
+      fallback.hidden = true;
+    }
+  }
+})();
+
+(function () {
   var editor = document.querySelector('[data-sprite-editor]');
 
   if (!editor) {
@@ -398,6 +548,7 @@
   var fileInput = editor.querySelector('[data-saved-file-input]');
   var statusLine = editor.querySelector('[data-saved-status]');
   var saveIconButtons = editor.querySelectorAll('[data-save-icon-changes]');
+  var downloadSprite = editor.querySelector('[data-download-sprite]');
 
   if (dropzone && fileInput) {
     dropzone.addEventListener('dragover', function (event) {
@@ -431,6 +582,7 @@
       symbolInput.addEventListener('input', function () {
         var isDirty = symbolInput.value !== symbolInput.getAttribute('data-original-value');
         form.classList.toggle('is-dirty', isDirty);
+        setCardDirty(form, isDirty);
         setRowStatus(rowStatus, isDirty ? 'Unsaved' : '');
         updateSaveIconButtons();
       });
@@ -445,6 +597,21 @@
   saveIconButtons.forEach(function (button) {
     button.addEventListener('click', saveIconChanges);
   });
+
+  if (downloadSprite) {
+    downloadSprite.addEventListener('click', function (event) {
+      if (dirtyIconCount() === 0) {
+        return;
+      }
+
+      event.preventDefault();
+      setSavedStatus('Save ID changes before downloading this sprite.', true);
+      var firstDirty = editor.querySelector('[data-icon-form].is-dirty input[name="symbol_id"]');
+      if (firstDirty) {
+        firstDirty.focus();
+      }
+    });
+  }
 
   editor.querySelectorAll('[data-details-toggle]').forEach(function (button) {
     button.addEventListener('click', function (event) {
@@ -589,6 +756,7 @@
         input.value = icon.symbol_id;
         input.setAttribute('data-original-value', icon.symbol_id);
         form.classList.remove('is-dirty');
+        setCardDirty(form, false);
         setRowStatus(form.querySelector('[data-row-status]'), 'Saved');
       });
 
@@ -609,7 +777,7 @@
   }
 
   function updateSaveIconButtons() {
-    var count = editor.querySelectorAll('[data-icon-form].is-dirty').length;
+    var count = dirtyIconCount();
     saveIconButtons.forEach(function (button) {
       button.hidden = count === 0;
       button.disabled = count === 0;
@@ -617,6 +785,17 @@
         ? 'Save ' + count + ' ID change' + (count === 1 ? '' : 's')
         : 'Save ID changes';
     });
+  }
+
+  function dirtyIconCount() {
+    return editor.querySelectorAll('[data-icon-form].is-dirty').length;
+  }
+
+  function setCardDirty(form, isDirty) {
+    var card = form.closest('[data-icon-row]');
+    if (card) {
+      card.classList.toggle('is-dirty', isDirty);
+    }
   }
 
   function closeIconPopovers() {

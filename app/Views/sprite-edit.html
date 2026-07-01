@@ -5,7 +5,7 @@
       <p class="lead">Manage symbol IDs, upload SVGs, and download this sprite.</p>
     </div>
     <div class="tool-actions">
-      <a class="button button-primary" href="/api/sprites/{{ @sprite.id }}.svg">Download sprite</a>
+      <a class="button button-primary" href="/api/sprites/{{ @sprite.id }}.svg" data-download-sprite>Download sprite</a>
     </div>
   </header>
 
@@ -74,39 +74,7 @@
       <true>
         <div class="saved-icon-grid">
           <repeat group="{{ @icons }}" value="{{ @icon }}">
-            <article class="saved-icon-card" data-icon-row="{{ @icon.id }}">
-              <div class="icon-preview" aria-hidden="true">
-                <svg viewBox="{{ @icon.view_box }}">{{ @icon.symbol_markup | raw }}</svg>
-              </div>
-              <check if="{{ count(@icon.messages) }}">
-                <button
-                  class="detail-badge {{ count(@icon.warnings) ? 'has-warnings' : '' }}"
-                  type="button"
-                  data-details-toggle
-                  aria-expanded="false"
-                  aria-label="{{ count(@icon.messages) }} cleanup {{ count(@icon.messages) == 1 ? 'detail' : 'details' }} for {{ @icon.symbol_id }}"
-                >{{ count(@icon.messages) }}</button>
-                <div class="icon-popover" data-details-popover hidden>
-                  <strong>{{ count(@icon.warnings) ? 'Warnings' : 'Details' }}</strong>
-                  <ul>
-                    <repeat group="{{ @icon.messages }}" value="{{ @message }}">
-                      <li>{{ @message }}</li>
-                    </repeat>
-                  </ul>
-                </div>
-              </check>
-              <form class="saved-icon-form" data-icon-form="{{ @icon.id }}">
-                <input type="hidden" name="csrf_token" value="{{ @csrfToken }}">
-                <label>
-                  <span class="visually-hidden">Symbol ID</span>
-                  <input name="symbol_id" value="{{ @icon.symbol_id }}" required pattern="[a-z][a-z0-9_-]{0,119}">
-                </label>
-                <div class="row-actions">
-                  <button class="button button-plain icon-delete" type="button" data-delete-icon="{{ @icon.id }}" aria-label="Delete {{ @icon.symbol_id }}" title="Delete">×</button>
-                </div>
-                <span class="row-status" data-row-status aria-live="polite"></span>
-              </form>
-            </article>
+            <include href="partials/icon-card.html" />
           </repeat>
         </div>
         <div class="icon-grid-footer">

@@ -60,7 +60,10 @@ $f3->route('GET /health', 'App\Controllers\HealthController->show');
 $f3->route('GET /auth/login', 'App\Controllers\AuthController->login');
 $f3->route('GET /auth/callback', 'App\Controllers\AuthController->callback');
 $f3->route('POST /auth/logout', 'App\Controllers\AuthController->logout');
-$f3->route('GET /dashboard', 'App\Controllers\DashboardController->index');
+$f3->route('GET /dashboard', static function (Base $f3): void {
+    $f3->reroute('/sprites');
+});
+$f3->route('GET /sprites', 'App\Controllers\DashboardController->index');
 $f3->route('POST /sprites', 'App\Controllers\SpriteController->create');
 $f3->route('GET /sprites/@id', 'App\Controllers\SpriteController->edit');
 $f3->route('POST /sprites/@id', 'App\Controllers\SpriteController->update');

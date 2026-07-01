@@ -29,7 +29,7 @@ final class AuthController
                 'error' => $f3->get('GET.error'),
             ]);
 
-            $f3->reroute('/dashboard');
+            $f3->reroute('/sprites');
         } catch (\Throwable $exception) {
             $this->renderMessage($f3, 'Sign-in failed', $exception->getMessage(), 400);
         }

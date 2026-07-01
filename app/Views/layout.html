@@ -12,7 +12,7 @@
   <meta name="theme-color" content="#7C5CFF">
   <meta property="og:title" content="{{ @title }}">
   <meta property="og:image" content="/assets/favicon/og.png">
-  <link rel="stylesheet" href="/assets/css/app.css?v=20260701-editor-batch-2">
+  <link rel="stylesheet" href="/assets/css/app.css?v=20260701-colorize-restrained">
 </head>
 <body>
   <header class="site-header">
@@ -22,14 +22,25 @@
     <nav class="site-nav" aria-label="Primary">
       <check if="{{ @currentUser }}">
         <true>
-          <a class="button button-secondary" href="/dashboard">Dashboard</a>
-          <form class="inline-form" method="post" action="/auth/logout">
-            <input type="hidden" name="csrf_token" value="{{ @csrfToken }}">
-            <button class="button button-secondary" type="submit">Sign out</button>
-          </form>
+          <a class="nav-link" href="/sprites">Sprites</a>
+          <details class="account-menu">
+            <summary aria-label="Account menu">
+              <span class="avatar-initial" aria-hidden="true">{{ strtoupper(substr(@currentUser.display_name ? @currentUser.display_name : (@currentUser.email ? @currentUser.email : 'G'), 0, 1)) }}</span>
+            </summary>
+            <div class="account-dropdown">
+              <div class="account-header">
+                <strong>{{ @currentUser.display_name ? @currentUser.display_name : 'Glyph user' }}</strong>
+                <span>{{ @currentUser.email ? @currentUser.email : 'Signed in with Sorkos' }}</span>
+              </div>
+              <form class="inline-form" method="post" action="/auth/logout">
+                <input type="hidden" name="csrf_token" value="{{ @csrfToken }}">
+                <button class="account-menu-item" type="submit">Sign out</button>
+              </form>
+            </div>
+          </details>
         </true>
         <false>
-          <a class="button button-secondary" href="{{ @authLoginUrl }}">Sign in with Sorkos</a>
+          <a class="nav-link" href="{{ @authLoginUrl }}">Sign in with Sorkos</a>
         </false>
       </check>
     </nav>
@@ -47,15 +58,15 @@
   </main>
 
   <footer class="site-footer">
-    <span>
-      <check if="{{ @currentUser }}">
-        <true>Saved sprites stay in your account. Guest sprites stay in this browser.</true>
-        <false>Guest sprites are stored only in this browser. Sign in to save sprite projects later.</false>
-      </check>
-    </span>
-    <a href="https://sorkos.net">Sorkos</a>
+    <div class="site-footer-inner">
+      <span>&copy; {{ date('Y') }} by <a href="https://sorkos.net">sorkos.net</a>.</span>
+      <div class="footer-support" data-kofi-anchor>
+        <a class="kofi-fallback" href="https://ko-fi.com/boohja" target="_blank" rel="noopener">Support me</a>
+      </div>
+    </div>
   </footer>
 
-  <script src="/assets/js/app.js?v=20260701-editor-batch-2" defer></script>
+  <script src="https://storage.ko-fi.com/cdn/scripts/overlay-widget.js"></script>
+  <script src="/assets/js/app.js?v=20260701-colorize-restrained" defer></script>
 </body>
 </html>

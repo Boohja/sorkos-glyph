@@ -109,7 +109,7 @@ final class SpriteController
         }
 
         $this->sprites($f3)->softDelete((int)$f3->get('PARAMS.id'), (int)$currentUser['id']);
-        $f3->reroute('/dashboard');
+        $f3->reroute('/sprites');
     }
 
     /**
