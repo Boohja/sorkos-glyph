@@ -11,7 +11,6 @@
   var grid = tool.querySelector('[data-icon-grid]');
   var emptyState = tool.querySelector('[data-empty-state]');
   var statusLine = tool.querySelector('[data-status]');
-  var downloadFallback = tool.querySelector('[data-download-fallback]');
   var usageSnippet = tool.querySelector('[data-usage-snippet]');
   var modeSelect = tool.querySelector('[data-option="mode"]');
   var actions = {
@@ -75,8 +74,7 @@
       window.setTimeout(function () {
         link.remove();
       }, 1000);
-      showDownloadFallback(sprite);
-      setStatus('Sprite ready. If the download did not start, use the download link below.');
+      setStatus('');
     });
   });
 
@@ -163,6 +161,7 @@
     grid.innerHTML = '';
 
     var hasIcons = state.icons.length > 0;
+    tool.classList.toggle('has-icons', hasIcons);
     emptyState.hidden = hasIcons;
     actions.download.disabled = !hasIcons;
     actions.copySprite.disabled = !hasIcons;
@@ -350,12 +349,6 @@
         statusLine.textContent = '';
       }, 3200);
     }
-  }
-
-  function showDownloadFallback(sprite) {
-    var href = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(sprite);
-    downloadFallback.hidden = false;
-    downloadFallback.innerHTML = '<a class="button button-secondary" download="sprite.svg" href="' + href + '">Download ready sprite</a>';
   }
 
   function flashCopyButton(button, message) {

@@ -1,78 +1,66 @@
-<section class="intro-panel" aria-labelledby="tool-title">
+<section class="home-workbench" aria-labelledby="tool-title">
   <div class="intro-copy">
-    <div>
-      <h1 id="tool-title">Clean SVG sprites without a build step.</h1>
-      <p class="lead">Upload individual SVG icons. Glyph cleans them on the server, converts colors to <code>currentColor</code>, and gives you one downloadable sprite for projects without npm, bundlers, or a build pipeline.</p>
-      <check if="{{ !@currentUser }}">
-        <p class="account-hint">Guest sprites stay only in this browser. Sign in with Sorkos if you want to keep sprite projects for later.</p>
-      </check>
-    </div>
+    <h1 id="tool-title">Clean SVG sprites without a build step.</h1>
+    <p class="lead">Upload individual SVG icons. Glyph cleans them on the server, converts colors to <code>currentColor</code>, and gives you one downloadable sprite for projects without npm, bundlers, or a build pipeline.</p>
+    <check if="{{ !@currentUser }}">
+      <p class="account-hint">Guest sprites stay only in this browser. <a href="{{ @authLoginUrl }}">Sign in</a> if you want to keep sprite projects for later.</p>
+    </check>
   </div>
 
-  <aside class="static-sprite-sample" aria-label="Static example output">
-    <div class="sample-bar">
-      <span>example output</span>
-      <span>static</span>
-    </div>
-    <pre><code>&lt;svg
-  xmlns="http://www.w3.org/2000/svg"
-  style="display:none"
-&gt;
-  &lt;symbol id="search" viewBox="0 0 24 24"&gt;
-    &lt;path d="..." fill="currentColor"/&gt;
-  &lt;/symbol&gt;
-  &lt;symbol id="close" viewBox="0 0 24 24"&gt;
-    &lt;path d="..." stroke="currentColor"/&gt;
-  &lt;/symbol&gt;
-&lt;/svg&gt;</code></pre>
-  </aside>
-</section>
+  <img class="static-sprite-sample" src="/assets/example.webp" alt="Example SVG sprite output" width="500" height="322" decoding="async">
 
-<section class="tool-shell tool-shell-primary tool-workspace" id="tool" aria-label="SVG sprite workspace" data-glyph-tool>
-  <label class="dropzone" data-dropzone>
-    <input type="file" accept=".svg,image/svg+xml" multiple data-file-input aria-label="Choose SVG files">
-    <strong>Drop SVG icons here</strong>
-    <span>or choose files from your computer.</span>
-    <small>Your temporary sprite stays in this browser until you clear it.</small>
-  </label>
-
-  <div class="status-line" data-status aria-live="polite"></div>
-  <div class="download-fallback" data-download-fallback hidden></div>
-
-  <div class="option-row">
-    <label class="field-inline">
-      <span>Output</span>
-      <select data-option="mode">
-        <option value="pretty">Pretty</option>
-        <option value="minified">Minified</option>
-      </select>
-    </label>
-    <div class="tool-actions">
-      <button class="button button-primary" type="button" data-action="download" disabled>Download sprite</button>
-      <button class="button button-secondary" type="button" data-action="copy-sprite" data-copy-label="Copy sprite" disabled>Copy sprite</button>
-      <button class="button button-secondary" type="button" data-action="clear" disabled>Clear local sprite</button>
-    </div>
-  </div>
-
-  <div class="empty-state" data-empty-state>
-    <h3>No icons yet.</h3>
-    <p>Upload SVGs to build a temporary sprite. You can adjust symbol IDs before downloading.</p>
-  </div>
-
-  <div class="saved-icon-grid" data-icon-grid aria-live="polite"></div>
-
-  <div class="sprite-output">
-    <div class="tool-header">
+  <section class="tool-shell tool-shell-primary tool-workspace" id="tool" aria-label="SVG sprite workspace" data-glyph-tool>
+    <div class="tool-topline">
       <div>
-        <h3>Usage snippet</h3>
-        <p>Use a generated symbol ID in your HTML.</p>
+        <h2>Sprite workspace</h2>
+        <p>Start with one SVG or drop a whole icon set.</p>
       </div>
     </div>
-    <div class="code-preview-box">
-      <button class="copy-inline" type="button" data-action="copy-usage" data-copy-label="Copy" disabled>Copy</button>
-      <pre><code data-usage-snippet>&lt;svg class="icon" aria-hidden="true"&gt;
+
+    <label class="dropzone" data-dropzone>
+      <input type="file" accept=".svg,image/svg+xml" multiple data-file-input aria-label="Choose SVG files">
+      <strong>Drop SVG icons here</strong>
+      <span>or choose files from your computer.</span>
+      <small>Your temporary sprite stays in this browser until you clear it.</small>
+    </label>
+
+    <div class="status-line" data-status aria-live="polite"></div>
+
+    <div class="option-row">
+      <label class="field-inline">
+        <span>Output</span>
+        <select data-option="mode">
+          <option value="pretty">Pretty</option>
+          <option value="minified">Minified</option>
+        </select>
+      </label>
+      <div class="tool-actions">
+        <button class="button button-primary" type="button" data-action="download" disabled>Download sprite</button>
+        <button class="button button-secondary" type="button" data-action="copy-sprite" data-copy-label="Copy sprite" disabled>Copy sprite</button>
+        <button class="button button-secondary" type="button" data-action="clear" disabled>Clear local sprite</button>
+      </div>
+    </div>
+
+    <div class="empty-state" data-empty-state>
+      <h3>No icons yet.</h3>
+      <p>Upload SVGs to build a temporary sprite. You can adjust symbol IDs before downloading.</p>
+    </div>
+
+    <div class="saved-icon-grid" data-icon-grid aria-live="polite"></div>
+
+    <div class="sprite-output">
+      <div class="tool-header">
+        <div>
+          <h3>Usage snippet</h3>
+          <p>Use a generated symbol ID in your HTML.</p>
+        </div>
+      </div>
+      <div class="code-preview-box">
+        <button class="copy-inline" type="button" data-action="copy-usage" data-copy-label="Copy" disabled>Copy</button>
+        <pre><code data-usage-snippet>&lt;svg class="icon" aria-hidden="true"&gt;
   &lt;use href="/assets/icons.svg#symbol-id"&gt;&lt;/use&gt;
 &lt;/svg&gt;</code></pre>
+      </div>
     </div>
-  </div>
+  </section>
 </section>

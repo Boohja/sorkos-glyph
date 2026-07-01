@@ -22,6 +22,12 @@ final class AuthController
 
     public function callback(Base $f3): void
     {
+        if ($f3->get('GET.error') === 'access_denied') {
+            unset($_SESSION['sorkos_oauth_state']);
+            $f3->reroute('/');
+            return;
+        }
+
         try {
             $this->authService($f3)->completeCallback([
                 'code' => $f3->get('GET.code'),
