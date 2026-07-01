@@ -1,0 +1,68 @@
+<section class="dashboard-shell">
+  <header class="dashboard-heading">
+    <div>
+      <h1>Saved sprites</h1>
+      <p class="lead">Open an existing sprite or create a new one when you need a fresh set.</p>
+    </div>
+  </header>
+
+  <check if="{{ @hasSprites }}">
+    <true>
+      <div class="sprite-list">
+        <repeat group="{{ @sprites }}" value="{{ @sprite }}">
+          <article class="sprite-row">
+            <div>
+              <h2>{{ @sprite.name }}</h2>
+              <p>{{ @sprite.icon_count }} icons · {{ @sprite.output_mode }} · updated {{ @sprite.updated_at }}</p>
+            </div>
+            <div class="row-actions">
+              <a class="button button-primary" href="/sprites/{{ @sprite.id }}">Open</a>
+              <a class="button button-secondary" href="/api/sprites/{{ @sprite.id }}.svg">Download</a>
+              <form method="post" action="/sprites/{{ @sprite.id }}/delete" onsubmit="return confirm('Delete this saved sprite?');">
+                <input type="hidden" name="csrf_token" value="{{ @csrfToken }}">
+                <button class="button button-secondary" type="submit">Delete</button>
+              </form>
+            </div>
+          </article>
+        </repeat>
+      </div>
+    </true>
+    <false>
+      <div class="empty-state dashboard-empty">
+        <h2>No saved sprites yet.</h2>
+        <p>Create your first sprite and keep your icons ready for later.</p>
+      </div>
+    </false>
+  </check>
+
+  <section class="create-sprite-panel" aria-labelledby="create-sprite-title">
+    <div class="section-heading">
+      <div>
+        <h2 id="create-sprite-title">Create sprite</h2>
+        <p>Start a saved sprite project. Icons are added on the next screen.</p>
+      </div>
+    </div>
+
+    <form class="create-sprite-form" method="post" action="/sprites">
+      <input type="hidden" name="csrf_token" value="{{ @csrfToken }}">
+      <div class="form-grid">
+        <label>
+          <span>Name</span>
+          <input name="name" required maxlength="120">
+        </label>
+        <label>
+          <span>Output</span>
+          <select name="output_mode">
+            <option value="pretty">Pretty</option>
+            <option value="minified">Minified</option>
+          </select>
+        </label>
+        <label class="span-2">
+          <span>Description</span>
+          <input name="description" maxlength="500">
+        </label>
+      </div>
+      <button class="button button-secondary" type="submit">Create sprite</button>
+    </form>
+  </section>
+</section>

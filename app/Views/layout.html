@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ @title }}</title>
+  <link rel="icon" href="/assets/favicon/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon/favicon-16x16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon/favicon-32x32.png">
+  <link rel="apple-touch-icon" href="/assets/favicon/apple-touch-icon.png">
+  <link rel="manifest" href="/assets/favicon/site.webmanifest">
+  <meta name="theme-color" content="#7C5CFF">
+  <meta property="og:title" content="{{ @title }}">
+  <meta property="og:image" content="/assets/favicon/og.png">
+  <link rel="stylesheet" href="/assets/css/app.css?v=20260701-editor-batch-2">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="{{ @appName }} home">
+      <img class="brand-logo" src="/assets/logo/landscape_light_nav.png" alt="{{ @appName }}">
+    </a>
+    <nav class="site-nav" aria-label="Primary">
+      <check if="{{ @currentUser }}">
+        <true>
+          <a class="button button-secondary" href="/dashboard">Dashboard</a>
+          <form class="inline-form" method="post" action="/auth/logout">
+            <input type="hidden" name="csrf_token" value="{{ @csrfToken }}">
+            <button class="button button-secondary" type="submit">Sign out</button>
+          </form>
+        </true>
+        <false>
+          <a class="button button-secondary" href="{{ @authLoginUrl }}">Sign in with Sorkos</a>
+        </false>
+      </check>
+    </nav>
+  </header>
+
+  <main>
+    <check if="{{ @SETUP_WARNING }}">
+      <section class="setup-warning" role="status">
+        <strong>Setup needed.</strong>
+        Copy <code>config/app.example.php</code> to <code>config/app.php</code> and <code>config/db.example.php</code> to <code>config/db.php</code> before production use.
+      </section>
+    </check>
+
+    <include href="{{ @content }}" />
+  </main>
+
+  <footer class="site-footer">
+    <span>
+      <check if="{{ @currentUser }}">
+        <true>Saved sprites stay in your account. Guest sprites stay in this browser.</true>
+        <false>Guest sprites are stored only in this browser. Sign in to save sprite projects later.</false>
+      </check>
+    </span>
+    <a href="https://sorkos.net">Sorkos</a>
+  </footer>
+
+  <script src="/assets/js/app.js?v=20260701-editor-batch-2" defer></script>
+</body>
+</html>

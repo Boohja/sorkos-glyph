@@ -1,0 +1,126 @@
+<section class="editor-shell" data-sprite-editor data-sprite-id="{{ @sprite.id }}" data-csrf="{{ @csrfToken }}">
+  <header class="editor-heading">
+    <div>
+      <h1>{{ @sprite.name }}</h1>
+      <p class="lead">Manage symbol IDs, upload SVGs, and download this sprite.</p>
+    </div>
+    <div class="tool-actions">
+      <a class="button button-primary" href="/api/sprites/{{ @sprite.id }}.svg">Download sprite</a>
+    </div>
+  </header>
+
+  <section class="editor-panel editor-panel-compact">
+    <div class="section-heading">
+      <div>
+        <h2>Settings</h2>
+        <p>Project metadata and output formatting.</p>
+      </div>
+    </div>
+
+    <form class="metadata-form" method="post" action="/sprites/{{ @sprite.id }}">
+    <input type="hidden" name="csrf_token" value="{{ @csrfToken }}">
+    <div class="form-grid">
+      <label>
+        <span>Name</span>
+        <input name="name" value="{{ @sprite.name }}" required maxlength="120">
+      </label>
+      <label>
+        <span>Filename</span>
+        <input name="slug" value="{{ @sprite.slug }}" maxlength="140">
+      </label>
+      <label>
+        <span>Output</span>
+        <select name="output_mode">
+          <option value="pretty" <check if="{{ @sprite.output_mode=='pretty' }}">selected</check>>Pretty</option>
+          <option value="minified" <check if="{{ @sprite.output_mode=='minified' }}">selected</check>>Minified</option>
+        </select>
+      </label>
+      <label class="span-2">
+        <span>Description</span>
+        <input name="description" value="{{ @sprite.description }}" maxlength="500">
+      </label>
+    </div>
+      <button class="button button-secondary" type="submit">Save settings</button>
+    </form>
+  </section>
+
+  <section class="editor-panel editor-panel-compact">
+    <div class="tool-header">
+      <div>
+        <h2>Upload</h2>
+        <p>Uploaded SVGs are cleaned and saved with currentColor.</p>
+      </div>
+    </div>
+    <label class="dropzone" data-saved-dropzone>
+      <input type="file" accept=".svg,image/svg+xml" multiple data-saved-file-input aria-label="Choose SVG files">
+      <strong>Drop SVG icons here</strong>
+      <span>or choose files from your computer.</span>
+    </label>
+    <div class="status-line" data-saved-status aria-live="polite"></div>
+  </section>
+
+  <section class="editor-panel icons-panel">
+    <div class="tool-header">
+      <div>
+        <h2>Icons</h2>
+        <p>{{ count(@icons) }} saved icons in this sprite.</p>
+      </div>
+      <button class="button button-primary button-small save-icon-changes" type="button" data-save-icon-changes hidden>
+        Save ID changes
+      </button>
+    </div>
+
+    <check if="{{ count(@icons) }}">
+      <true>
+        <div class="saved-icon-grid">
+          <repeat group="{{ @icons }}" value="{{ @icon }}">
+            <article class="saved-icon-card" data-icon-row="{{ @icon.id }}">
+              <div class="icon-preview" aria-hidden="true">
+                <svg viewBox="{{ @icon.view_box }}">{{ @icon.symbol_markup | raw }}</svg>
+              </div>
+              <check if="{{ count(@icon.messages) }}">
+                <button
+                  class="detail-badge {{ count(@icon.warnings) ? 'has-warnings' : '' }}"
+                  type="button"
+                  data-details-toggle
+                  aria-expanded="false"
+                  aria-label="{{ count(@icon.messages) }} cleanup {{ count(@icon.messages) == 1 ? 'detail' : 'details' }} for {{ @icon.symbol_id }}"
+                >{{ count(@icon.messages) }}</button>
+                <div class="icon-popover" data-details-popover hidden>
+                  <strong>{{ count(@icon.warnings) ? 'Warnings' : 'Details' }}</strong>
+                  <ul>
+                    <repeat group="{{ @icon.messages }}" value="{{ @message }}">
+                      <li>{{ @message }}</li>
+                    </repeat>
+                  </ul>
+                </div>
+              </check>
+              <form class="saved-icon-form" data-icon-form="{{ @icon.id }}">
+                <input type="hidden" name="csrf_token" value="{{ @csrfToken }}">
+                <label>
+                  <span class="visually-hidden">Symbol ID</span>
+                  <input name="symbol_id" value="{{ @icon.symbol_id }}" required pattern="[a-z][a-z0-9_-]{0,119}">
+                </label>
+                <div class="row-actions">
+                  <button class="button button-plain icon-delete" type="button" data-delete-icon="{{ @icon.id }}" aria-label="Delete {{ @icon.symbol_id }}" title="Delete">×</button>
+                </div>
+                <span class="row-status" data-row-status aria-live="polite"></span>
+              </form>
+            </article>
+          </repeat>
+        </div>
+        <div class="icon-grid-footer">
+          <button class="button button-primary button-small save-icon-changes" type="button" data-save-icon-changes hidden>
+            Save ID changes
+          </button>
+        </div>
+      </true>
+      <false>
+        <div class="empty-state">
+          <h2>No icons yet.</h2>
+          <p>Upload SVG files to add sanitized symbols to this saved sprite.</p>
+        </div>
+      </false>
+    </check>
+  </section>
+</section>

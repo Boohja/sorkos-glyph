@@ -1,0 +1,90 @@
+<section class="hero">
+  <div class="hero-copy">
+    <p class="eyebrow">SVG sprite utility</p>
+    <h1>Clean SVG sprites without a build step.</h1>
+    <p class="lead">Upload individual SVG icons, clean them on the server, and download one lightweight sprite for your project.</p>
+    <div class="hero-actions">
+      <a class="button button-primary" href="#tool">Start a sprite</a>
+      <check if="{{ @currentUser }}">
+        <true>
+          <a class="button button-secondary" href="/dashboard">Open dashboard</a>
+        </true>
+        <false>
+          <a class="button button-secondary" href="{{ @authLoginUrl }}">Sign in with Sorkos</a>
+        </false>
+      </check>
+    </div>
+  </div>
+
+  <aside class="preview-panel" aria-label="Sprite preview placeholder">
+    <div class="preview-toolbar">
+      <span>sprite.svg</span>
+      <span>pretty</span>
+    </div>
+    <pre><code>&lt;svg xmlns="http://www.w3.org/2000/svg" style="display:none"&gt;
+  &lt;symbol id="search" viewBox="0 0 24 24"&gt;
+    &lt;path d="..." fill="currentColor"/&gt;
+  &lt;/symbol&gt;
+&lt;/svg&gt;</code></pre>
+  </aside>
+</section>
+
+<section class="tool-shell" id="tool" aria-labelledby="tool-title" data-glyph-tool>
+  <div class="tool-header">
+    <div>
+      <p class="eyebrow">
+        <check if="{{ @currentUser }}">
+          <true>Sprite workspace</true>
+          <false>Guest mode</false>
+        </check>
+      </p>
+      <h2 id="tool-title">Temporary sprite workspace</h2>
+      <p class="tool-intro">Upload SVGs first. Review the cleaned icons, then choose output options and download the sprite.</p>
+    </div>
+  </div>
+
+  <label class="dropzone" data-dropzone>
+    <input type="file" accept=".svg,image/svg+xml" multiple data-file-input aria-label="Choose SVG files">
+    <strong>Drop SVG icons here</strong>
+    <span>or choose files from your computer.</span>
+    <small>Your temporary sprite stays in this browser until you clear it.</small>
+  </label>
+
+  <div class="status-line" data-status aria-live="polite"></div>
+  <div class="download-fallback" data-download-fallback hidden></div>
+
+  <div class="empty-state" data-empty-state>
+    <h3>No icons yet.</h3>
+    <p>Upload SVGs to build a temporary sprite. Guest data stays in this browser unless you sign in and save it later.</p>
+  </div>
+
+  <div class="icon-grid" data-icon-grid aria-live="polite"></div>
+
+  <div class="option-row">
+    <label class="field-inline">
+      <span>Output</span>
+      <select data-option="mode">
+        <option value="pretty">Pretty</option>
+        <option value="minified">Minified</option>
+      </select>
+    </label>
+    <div class="tool-actions">
+      <button class="button button-primary" type="button" data-action="download" disabled>Download sprite</button>
+      <button class="button button-secondary" type="button" data-action="copy-sprite" disabled>Copy sprite</button>
+      <button class="button button-secondary" type="button" data-action="clear" disabled>Clear local sprite</button>
+    </div>
+  </div>
+
+  <div class="sprite-output">
+    <div class="tool-header">
+      <div>
+        <h3>Usage snippet</h3>
+        <p>Use a generated symbol ID in your HTML.</p>
+      </div>
+      <button class="button button-secondary" type="button" data-action="copy-usage" disabled>Copy usage snippet</button>
+    </div>
+    <pre><code data-usage-snippet>&lt;svg class="icon" aria-hidden="true"&gt;
+  &lt;use href="/assets/icons.svg#symbol-id"&gt;&lt;/use&gt;
+&lt;/svg&gt;</code></pre>
+  </div>
+</section>

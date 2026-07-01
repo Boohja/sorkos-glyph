@@ -1,0 +1,32 @@
+<?php
+
+return [
+    'app' => [
+        'env' => 'local',
+        'debug' => true,
+        'base_url' => 'https://glyph.test',
+        'name' => 'Glyph',
+    ],
+
+    'security' => [
+        'session_name' => 'glyph_session',
+        'session_secure' => true,
+        'session_httponly' => true,
+        'session_samesite' => 'Lax',
+        'csrf_key' => 'change-me',
+    ],
+
+    'uploads' => [
+        'max_file_size_bytes' => 200000,
+        'max_files_per_batch' => 50,
+        'max_icons_per_guest_sprite' => 100,
+        'max_icons_per_saved_sprite' => 500,
+    ],
+
+    'auth' => [
+        'base_url' => 'https://auth.test',
+        'client_id' => 'glyph-local-client-id',
+        'client_secret' => 'glyph-local-client-secret',
+        'scopes' => ['profile', 'email'],
+    ],
+];

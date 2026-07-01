@@ -1,1 +1,11 @@
-docs/
+/config/app.php
+/config/db.php
+/storage/cache/*
+/storage/logs/*
+/tmp/*
+.impeccable
+/docs
+
+!/storage/cache/.gitkeep
+!/storage/logs/.gitkeep
+!/tmp/.gitkeep
