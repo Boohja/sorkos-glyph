@@ -235,6 +235,18 @@ select:focus-visible,
   background: var(--primary-hover);
 }
 
+.button-primary-outline {
+  border-color: var(--primary);
+  background: var(--panel);
+  color: var(--primary);
+}
+
+.button-primary-outline:hover,
+.button-primary-outline:focus-visible {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
 .button-secondary {
   border-color: var(--border);
   background: var(--panel);
@@ -471,7 +483,9 @@ main {
 
 .tool-workspace {
   grid-column: 1 / -1;
+  width: 100%;
   min-width: 0;
+  margin-inline: 0;
 }
 
 .tool-topline,
@@ -538,7 +552,7 @@ main {
 
 .dashboard-shell h1 {
   max-width: none;
-  margin-bottom: 8px;
+  margin-bottom: 0;
   font-size: 2.25rem;
   line-height: 1.1;
 }
@@ -614,29 +628,47 @@ main {
   padding: 0;
 }
 
-.editor-shell .editor-panel-compact {
+.editor-workflow {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.75fr) minmax(0, 1.55fr);
+  gap: 24px;
   border-bottom: 1px solid var(--border);
-  padding-bottom: 20px;
+  margin-bottom: 22px;
+  padding-bottom: 22px;
+}
+
+.editor-shell .editor-panel-compact {
+  border-bottom: 0;
+  padding-bottom: 0;
 }
 
 .metadata-form {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 16px;
-  align-items: end;
+  gap: 14px;
+  align-items: start;
+}
+
+.metadata-form h2 {
+  margin-bottom: 0;
+  font-size: 1rem;
+  line-height: 1.25;
 }
 
 .metadata-form .form-grid {
-  grid-template-columns: minmax(180px, 1fr) minmax(160px, 0.7fr) minmax(140px, 0.55fr) minmax(220px, 1.2fr);
+  grid-template-columns: minmax(180px, 1fr) minmax(160px, 0.85fr) minmax(120px, 0.55fr);
 }
 
 .metadata-form .span-2 {
-  grid-column: auto;
+  grid-column: 1 / -1;
+}
+
+.metadata-form .button {
+  justify-self: start;
 }
 
 .editor-shell .dropzone {
-  min-height: 118px;
-  margin-top: 12px;
+  min-height: 100%;
+  margin-top: 0;
   padding: 20px;
 }
 
@@ -645,7 +677,33 @@ main {
 }
 
 .icons-panel {
-  padding-top: 4px;
+  padding-top: 0;
+}
+
+.upload-panel {
+  display: grid;
+  align-content: stretch;
+  gap: 12px;
+}
+
+.upload-panel .tool-header,
+.upload-panel .status-line {
+  margin: 0;
+}
+
+.upload-panel .status-line:empty {
+  display: none;
+}
+
+.editor-shell .settings-panel {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  padding: 14px;
+}
+
+.settings-panel .metadata-form .button {
+  justify-self: end;
 }
 
 .create-sprite-form {
@@ -653,27 +711,6 @@ main {
   gap: 16px;
   border-top: 1px solid var(--border);
   padding-top: 18px;
-}
-
-.create-sprite-panel {
-  margin-top: 28px;
-  border-top: 1px solid var(--border);
-  padding-top: 20px;
-}
-
-.create-sprite-panel .create-sprite-form {
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: end;
-  border-top: 0;
-  padding-top: 0;
-}
-
-.create-sprite-panel .form-grid {
-  grid-template-columns: minmax(180px, 1fr) 180px minmax(220px, 1.2fr);
-}
-
-.create-sprite-panel .span-2 {
-  grid-column: auto;
 }
 
 .form-grid {
@@ -732,15 +769,50 @@ main {
   padding: 14px;
 }
 
+.sprite-row-main {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 12px;
+}
+
+.sprite-row-preview {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--code-bg);
+  color: var(--text);
+}
+
+.sprite-row-preview svg {
+  width: 26px;
+  height: 26px;
+  fill: currentColor;
+}
+
+.sprite-row-copy {
+  min-width: 0;
+}
+
 .sprite-row h2 {
+  overflow: hidden;
   margin-bottom: 4px;
   font-size: 1.1rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sprite-row p,
 .editor-panel p {
+  overflow: hidden;
   margin-bottom: 0;
   color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .row-actions {
@@ -962,6 +1034,18 @@ main {
   padding-top: 18px;
 }
 
+.dashboard-empty {
+  margin-top: 0;
+  border-top: 0;
+  padding-top: 0;
+}
+
+.dashboard-empty p {
+  margin-bottom: 0;
+  color: var(--muted);
+  font-weight: 700;
+}
+
 .tool-shell-primary .option-row {
   justify-content: space-between;
   border-top: 0;
@@ -1163,40 +1247,51 @@ main {
   text-decoration: none;
 }
 
-.footer-support {
-  position: relative;
-  display: flex;
-  min-width: 122px;
-  justify-content: flex-end;
-}
-
-.kofi-fallback {
-  display: inline-flex;
-  min-height: 38px;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  background: #00b9fe;
-  color: var(--on-primary);
-  padding: 8px 13px;
-  font-weight: 800;
-}
-
-.footer-support .floatingchat-container-wrap,
-.footer-support [class*="floatingchat-container"] {
-  position: static !important;
+.floatingchat-container-wrap {
+  position: relative !important;
   inset: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  z-index: 1 !important;
+  width: 180px !important;
+  height: 65px !important;
+  margin: -70px max(16px, calc((100vw - 1120px) / 2)) 5px auto !important;
   transform: none !important;
 }
 
-.footer-support iframe {
+.floatingchat-container-wrap iframe {
+  position: absolute !important;
+  inset: 0 auto auto 0 !important;
   max-width: 100%;
 }
 
-.kofi-docked-open,
-[class*="floatingchat-container-wrap"].kofi-docked-open {
-  bottom: 82px !important;
+.floating-chat-kofi-popup-iframe {
+  position: absolute !important;
   top: auto !important;
+  right: max(16px, calc((100vw - 1120px) / 2)) !important;
+  bottom: 0 !important;
+  left: auto !important;
+  z-index: 20 !important;
+  width: min(328px, calc(100vw - 32px)) !important;
+  height: min(690px, calc(100vh - 120px)) !important;
+}
+
+.floating-chat-kofi-popup-iframe-container {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.floating-chat-kofi-popup-iframe iframe[src*="ko-fi.com/boohja/"][src*="embed=true"] {
+  position: static !important;
+  inset: auto !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-height: none !important;
+}
+
+.floatingchat-container-wrap-mobi {
+  display: none !important;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1238,6 +1333,11 @@ main {
 
   .form-grid,
   .saved-icon-form {
+    grid-template-columns: 1fr;
+  }
+
+  .editor-workflow,
+  .metadata-form .form-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1283,6 +1383,17 @@ main {
   .tool-actions,
   .option-row,
   .button {
+    width: 100%;
+  }
+
+  .editor-heading .tool-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .editor-heading .tool-actions .inline-form,
+  .editor-heading .tool-actions .button {
     width: 100%;
   }
 

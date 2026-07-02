@@ -12,7 +12,7 @@
   <meta name="theme-color" content="#7C5CFF">
   <meta property="og:title" content="{{ @title }}">
   <meta property="og:image" content="/assets/favicon/og.png">
-  <link rel="stylesheet" href="/assets/css/app.css?v=20260701-intro-polish">
+  <link rel="stylesheet" href="/assets/css/app.css?v=20260702-home-workspace-align">
 </head>
 <body>
   <header class="site-header">
@@ -60,13 +60,18 @@
   <footer class="site-footer">
     <div class="site-footer-inner">
       <span>&copy; {{ date('Y') }} by <a href="https://sorkos.net">sorkos.net</a>.</span>
-      <div class="footer-support" data-kofi-anchor>
-        <a class="kofi-fallback" href="https://ko-fi.com/boohja" target="_blank" rel="noopener">Support me</a>
-      </div>
     </div>
   </footer>
 
   <script src="https://storage.ko-fi.com/cdn/scripts/overlay-widget.js"></script>
-  <script src="/assets/js/app.js?v=20260701-intro-polish" defer></script>
+  <script>
+    kofiWidgetOverlay.draw('boohja', {
+      type: 'floating-chat',
+      'floating-chat.donateButton.text': 'Support me',
+      'floating-chat.donateButton.background-color': '#00b9fe',
+      'floating-chat.donateButton.text-color': '#fff'
+    });
+  </script>
+  <script src="/assets/js/app.js?v=20260702-editor-copy-clarify" defer></script>
 </body>
 </html>

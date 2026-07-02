@@ -19,11 +19,27 @@ final class SpriteRepository
     {
         $statement = $this->pdo->prepare(
             'SELECT s.*,
-                    COUNT(i.id) AS icon_count
+                    (
+                        SELECT COUNT(*)
+                        FROM glyph_icons ci
+                        WHERE ci.sprite_id = s.id
+                    ) AS icon_count,
+                    (
+                        SELECT pi.view_box
+                        FROM glyph_icons pi
+                        WHERE pi.sprite_id = s.id
+                        ORDER BY pi.sort_order ASC, pi.id ASC
+                        LIMIT 1
+                    ) AS preview_view_box,
+                    (
+                        SELECT pi.symbol_markup
+                        FROM glyph_icons pi
+                        WHERE pi.sprite_id = s.id
+                        ORDER BY pi.sort_order ASC, pi.id ASC
+                        LIMIT 1
+                    ) AS preview_symbol_markup
              FROM glyph_sprites s
-             LEFT JOIN glyph_icons i ON i.sprite_id = s.id
              WHERE s.user_id = :user_id AND s.deleted_at IS NULL
-             GROUP BY s.id
              ORDER BY s.updated_at DESC, s.id DESC'
         );
         $statement->execute([':user_id' => $userId]);

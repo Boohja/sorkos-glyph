@@ -494,38 +494,6 @@
     });
   });
 
-  var kofiAnchor = document.querySelector('[data-kofi-anchor]');
-
-  if (!kofiAnchor || !window.kofiWidgetOverlay) {
-    return;
-  }
-
-  window.kofiWidgetOverlay.draw('boohja', {
-    type: 'floating-chat',
-    'floating-chat.donateButton.text': 'Support me',
-    'floating-chat.donateButton.background-color': '#00b9fe',
-    'floating-chat.donateButton.text-color': '#fff'
-  });
-
-  dockKofiWidget();
-
-  var observer = new MutationObserver(dockKofiWidget);
-  observer.observe(document.body, { childList: true, subtree: true });
-
-  function dockKofiWidget() {
-    var widget = document.querySelector('.floatingchat-container-wrap');
-
-    if (!widget || kofiAnchor.contains(widget)) {
-      return;
-    }
-
-    widget.classList.add('kofi-docked');
-    kofiAnchor.appendChild(widget);
-    var fallback = kofiAnchor.querySelector('.kofi-fallback');
-    if (fallback) {
-      fallback.hidden = true;
-    }
-  }
 })();
 
 (function () {
@@ -542,6 +510,7 @@
   var statusLine = editor.querySelector('[data-saved-status]');
   var saveIconButtons = editor.querySelectorAll('[data-save-icon-changes]');
   var downloadSprite = editor.querySelector('[data-download-sprite]');
+  var copySprite = editor.querySelector('[data-copy-saved-sprite]');
 
   if (dropzone && fileInput) {
     dropzone.addEventListener('dragover', function (event) {
@@ -598,11 +567,45 @@
       }
 
       event.preventDefault();
-      setSavedStatus('Save ID changes before downloading this sprite.', true);
+      setSavedStatus('Save ID changes before downloading.', true);
       var firstDirty = editor.querySelector('[data-icon-form].is-dirty input[name="symbol_id"]');
       if (firstDirty) {
         firstDirty.focus();
       }
+    });
+  }
+
+  if (copySprite && downloadSprite) {
+    copySprite.addEventListener('click', function () {
+      if (dirtyIconCount() > 0) {
+        setSavedStatus('Save ID changes before copying.', true);
+        var firstDirty = editor.querySelector('[data-icon-form].is-dirty input[name="symbol_id"]');
+        if (firstDirty) {
+          firstDirty.focus();
+        }
+        return;
+      }
+
+      copySprite.disabled = true;
+      setSavedStatus('Copying sprite...');
+
+      fetch(downloadSprite.href, {
+        credentials: 'same-origin'
+      }).then(function (response) {
+        if (!response.ok) {
+          throw new Error('Could not copy sprite. Try downloading instead.');
+        }
+        return response.text();
+      }).then(function (sprite) {
+        return navigator.clipboard.writeText(sprite);
+      }).then(function () {
+        flashSavedButton(copySprite, 'Copied');
+        setSavedStatus('Sprite copied.');
+      }).catch(function (error) {
+        setSavedStatus(error.message || 'Could not copy sprite. Try downloading instead.', true);
+      }).finally(function () {
+        copySprite.disabled = false;
+      });
     });
   }
 
@@ -632,7 +635,7 @@
 
   editor.querySelectorAll('[data-delete-icon]').forEach(function (button) {
     button.addEventListener('click', function () {
-      if (!window.confirm('Delete this icon from the sprite?')) {
+      if (!window.confirm('Delete this icon?')) {
         return;
       }
 
@@ -671,18 +674,18 @@
       formData.append('icons[]', file);
     });
 
-    setSavedStatus('Cleaning and saving ' + files.length + ' SVG file' + (files.length === 1 ? '' : 's') + '...');
+    setSavedStatus('Adding ' + files.length + ' SVG file' + (files.length === 1 ? '' : 's') + '...');
 
     postForm('/api/sprites/' + spriteId + '/icons', formData).then(function (data) {
       if (data.added > 0) {
-        setSavedStatus('Added ' + data.added + ' icon' + (data.added === 1 ? '' : 's') + '. Reloading...');
+        setSavedStatus('Added ' + data.added + ' icon' + (data.added === 1 ? '' : 's') + '.');
         window.location.reload();
         return;
       }
 
-      setSavedStatus('No icons were added. Check file errors and try again.', true);
+      setSavedStatus('No icons added. Check the SVG files and try again.', true);
     }).catch(function (error) {
-      setSavedStatus(error.message || 'Upload failed.', true);
+      setSavedStatus(error.message || 'Could not add icons. Try again.', true);
     });
   }
 
@@ -722,7 +725,7 @@
     if (invalidForm) {
       var invalidInput = invalidForm.querySelector('input[name="symbol_id"]');
       invalidInput.reportValidity();
-      setRowStatus(invalidForm.querySelector('[data-row-status]'), 'Invalid ID', true);
+      setRowStatus(invalidForm.querySelector('[data-row-status]'), 'Use a valid ID', true);
       return;
     }
 
@@ -824,12 +827,21 @@
     });
   }
 
+  function flashSavedButton(button, message) {
+    var label = button.getAttribute('data-copy-label') || button.textContent;
+    button.textContent = message;
+    window.clearTimeout(button._glyphCopyTimer);
+    button._glyphCopyTimer = window.setTimeout(function () {
+      button.textContent = label;
+    }, 2200);
+  }
+
   function errorMessage(data) {
     if (data && Array.isArray(data.errors) && data.errors[0]) {
       return data.errors.map(function (error) {
         return error.message || String(error);
       }).join(' ');
     }
-    return 'Request failed.';
+    return 'Request failed. Try again.';
   }
 })();

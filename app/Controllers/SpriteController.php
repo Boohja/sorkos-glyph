@@ -28,15 +28,7 @@ final class SpriteController
             return;
         }
 
-        $name = trim((string)$f3->get('POST.name'));
-        if ($name === '') {
-            $name = 'Untitled sprite';
-        }
-
-        $slug = (new SlugService())->fromString((string)($f3->get('POST.slug') ?: $name));
-        $description = trim((string)$f3->get('POST.description'));
-        $outputMode = (string)$f3->get('POST.output_mode');
-        $sprite = $this->sprites($f3)->create((int)$currentUser['id'], $name, $slug, $description, $outputMode);
+        $sprite = $this->sprites($f3)->create((int)$currentUser['id'], 'New sprite', 'sprite', '', 'pretty');
 
         $f3->reroute('/sprites/' . $sprite['id']);
     }
