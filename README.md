@@ -30,3 +30,4 @@ public/
 ## License
 
 Glyph is released under the [MIT License](LICENSE).
+
