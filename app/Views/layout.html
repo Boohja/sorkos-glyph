@@ -12,7 +12,7 @@
   <meta name="theme-color" content="#7C5CFF">
   <meta property="og:title" content="{{ @title }}">
   <meta property="og:image" content="/assets/favicon/og.png">
-  <link rel="stylesheet" href="/assets/css/app.css?v=20260702-home-workspace-align">
+  <link rel="stylesheet" href="/assets/css/app.css?v=20260703-kofi-popup-sync">
 </head>
 <body>
   <header class="site-header">
@@ -22,7 +22,7 @@
     <nav class="site-nav" aria-label="Primary">
       <check if="{{ @currentUser }}">
         <true>
-          <a class="nav-link" href="/sprites">Sprites</a>
+          <a class="nav-link" href="/sprites">Your Sprites</a>
           <details class="account-menu">
             <summary aria-label="Account menu">
               <span class="avatar-initial" aria-hidden="true">{{ strtoupper(substr(@currentUser.display_name ? @currentUser.display_name : (@currentUser.email ? @currentUser.email : 'G'), 0, 1)) }}</span>
@@ -72,6 +72,6 @@
       'floating-chat.donateButton.text-color': '#fff'
     });
   </script>
-  <script src="/assets/js/app.js?v=20260702-editor-copy-clarify" defer></script>
+  <script src="/assets/js/app.js?v=20260703-kofi-popup-sync" defer></script>
 </body>
 </html>

@@ -1267,14 +1267,15 @@ main {
 }
 
 .floating-chat-kofi-popup-iframe {
-  position: absolute !important;
+  position: fixed !important;
   top: auto !important;
-  right: max(16px, calc((100vw - 1120px) / 2)) !important;
-  bottom: 0 !important;
+  right: var(--kofi-popup-right, max(16px, calc((100vw - 1120px) / 2))) !important;
+  bottom: var(--kofi-popup-bottom, calc(env(safe-area-inset-bottom, 0px) + 88px)) !important;
   left: auto !important;
   z-index: 20 !important;
   width: min(328px, calc(100vw - 32px)) !important;
-  height: min(690px, calc(100vh - 120px)) !important;
+  height: min(690px, var(--kofi-popup-max-height, calc(100dvh - 120px))) !important;
+  transition: opacity 160ms ease-out !important;
 }
 
 .floating-chat-kofi-popup-iframe-container {

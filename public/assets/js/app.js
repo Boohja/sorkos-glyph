@@ -497,6 +497,71 @@
 })();
 
 (function () {
+  var rafId = 0;
+  var observer = null;
+
+  function scheduleKofiPopupSync() {
+    window.cancelAnimationFrame(rafId);
+    rafId = window.requestAnimationFrame(syncKofiPopup);
+  }
+
+  function syncKofiPopup() {
+    var button = document.querySelector('.floatingchat-container-wrap');
+    var popup = document.querySelector('.floating-chat-kofi-popup-iframe');
+
+    if (!button || !popup) {
+      return;
+    }
+
+    if (popup.parentElement !== document.body) {
+      document.body.appendChild(popup);
+    }
+
+    var buttonRect = button.getBoundingClientRect();
+    var viewportWidth = document.documentElement.clientWidth;
+    var viewportHeight = window.innerHeight;
+    var edgeGap = 16;
+    var buttonGap = 18;
+    var right = Math.max(edgeGap, viewportWidth - buttonRect.right);
+    var bottom = Math.max(edgeGap, viewportHeight - buttonRect.top + buttonGap);
+    var availableHeight = Math.max(220, buttonRect.top - buttonGap - edgeGap);
+    var width = Math.min(328, viewportWidth - edgeGap * 2);
+    var height = Math.min(690, availableHeight);
+
+    popup.style.setProperty('position', 'fixed', 'important');
+    popup.style.setProperty('top', 'auto', 'important');
+    popup.style.setProperty('right', right + 'px', 'important');
+    popup.style.setProperty('bottom', bottom + 'px', 'important');
+    popup.style.setProperty('left', 'auto', 'important');
+    popup.style.setProperty('width', width + 'px', 'important');
+    popup.style.setProperty('height', height + 'px', 'important');
+    popup.style.setProperty('transition', 'opacity 160ms ease-out', 'important');
+    popup.style.setProperty('--kofi-popup-right', right + 'px');
+    popup.style.setProperty('--kofi-popup-bottom', bottom + 'px');
+    popup.style.setProperty('--kofi-popup-max-height', availableHeight + 'px');
+  }
+
+  function startKofiPopupSync() {
+    scheduleKofiPopupSync();
+    window.addEventListener('resize', scheduleKofiPopupSync, { passive: true });
+    window.addEventListener('scroll', scheduleKofiPopupSync, { passive: true });
+
+    observer = new MutationObserver(scheduleKofiPopupSync);
+    observer.observe(document.body, {
+      attributes: true,
+      childList: true,
+      subtree: true
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startKofiPopupSync);
+  } else {
+    startKofiPopupSync();
+  }
+})();
+
+(function () {
   var editor = document.querySelector('[data-sprite-editor]');
 
   if (!editor) {
