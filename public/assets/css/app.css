@@ -1247,6 +1247,19 @@ main {
   text-decoration: none;
 }
 
+.footer-logo-link {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: -0.2em;
+}
+
+.footer-logo {
+  display: block;
+  width: auto;
+  height: 19px;
+  margin-left: 2px;
+}
+
 .floatingchat-container-wrap {
   position: relative !important;
   inset: auto !important;
@@ -1276,6 +1289,11 @@ main {
   width: min(328px, calc(100vw - 32px)) !important;
   height: min(690px, var(--kofi-popup-max-height, calc(100dvh - 120px))) !important;
   transition: opacity 160ms ease-out !important;
+}
+
+.floating-chat-kofi-popup-iframe[style*="opacity: 0"],
+.floating-chat-kofi-popup-iframe[style*="opacity:0"] {
+  pointer-events: none !important;
 }
 
 .floating-chat-kofi-popup-iframe-container {

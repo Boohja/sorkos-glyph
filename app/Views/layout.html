@@ -12,7 +12,7 @@
   <meta name="theme-color" content="#7C5CFF">
   <meta property="og:title" content="{{ @title }}">
   <meta property="og:image" content="/assets/favicon/og.png">
-  <link rel="stylesheet" href="/assets/css/app.css?v=20260703-kofi-popup-sync">
+  <link rel="stylesheet" href="/assets/css/app.css?v=20260708-kofi-overlay-fix">
 </head>
 <body>
   <header class="site-header">
@@ -59,19 +59,38 @@
 
   <footer class="site-footer">
     <div class="site-footer-inner">
-      <span>&copy; {{ date('Y') }} by <a href="https://sorkos.net">sorkos.net</a>.</span>
+      <span>&copy; {{ date('Y') }} by <a class="footer-logo-link" href="https://sorkos.net" aria-label="sorkos.net"><img class="footer-logo" src="/assets/logo/sorkos_dark_small.svg" alt="sorkos.net"></a></span>
     </div>
   </footer>
 
-  <script src="https://storage.ko-fi.com/cdn/scripts/overlay-widget.js"></script>
   <script>
-    kofiWidgetOverlay.draw('boohja', {
-      type: 'floating-chat',
-      'floating-chat.donateButton.text': 'Support me',
-      'floating-chat.donateButton.background-color': '#00b9fe',
-      'floating-chat.donateButton.text-color': '#fff'
-    });
+    (function () {
+      function loadKofiWidget() {
+        var script = document.createElement('script');
+        script.src = 'https://storage.ko-fi.com/cdn/scripts/overlay-widget.js';
+        script.async = true;
+        script.onload = function () {
+          if (!window.kofiWidgetOverlay) {
+            return;
+          }
+
+          window.kofiWidgetOverlay.draw('boohja', {
+            type: 'floating-chat',
+            'floating-chat.donateButton.text': 'Support me',
+            'floating-chat.donateButton.background-color': '#00b9fe',
+            'floating-chat.donateButton.text-color': '#fff'
+          });
+        };
+        document.body.appendChild(script);
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', loadKofiWidget);
+      } else {
+        loadKofiWidget();
+      }
+    })();
   </script>
-  <script src="/assets/js/app.js?v=20260703-kofi-popup-sync" defer></script>
+  <script src="/assets/js/app.js?v=20260708-kofi-overlay-fix" defer></script>
 </body>
 </html>

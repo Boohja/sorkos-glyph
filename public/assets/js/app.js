@@ -632,7 +632,6 @@
       }
 
       event.preventDefault();
-      setSavedStatus('Save ID changes before downloading.', true);
       var firstDirty = editor.querySelector('[data-icon-form].is-dirty input[name="symbol_id"]');
       if (firstDirty) {
         firstDirty.focus();
@@ -643,7 +642,6 @@
   if (copySprite && downloadSprite) {
     copySprite.addEventListener('click', function () {
       if (dirtyIconCount() > 0) {
-        setSavedStatus('Save ID changes before copying.', true);
         var firstDirty = editor.querySelector('[data-icon-form].is-dirty input[name="symbol_id"]');
         if (firstDirty) {
           firstDirty.focus();
@@ -652,7 +650,6 @@
       }
 
       copySprite.disabled = true;
-      setSavedStatus('Copying sprite...');
 
       fetch(downloadSprite.href, {
         credentials: 'same-origin'
@@ -665,9 +662,8 @@
         return navigator.clipboard.writeText(sprite);
       }).then(function () {
         flashSavedButton(copySprite, 'Copied');
-        setSavedStatus('Sprite copied.');
       }).catch(function (error) {
-        setSavedStatus(error.message || 'Could not copy sprite. Try downloading instead.', true);
+        copySprite.title = error.message || 'Could not copy sprite. Try downloading instead.';
       }).finally(function () {
         copySprite.disabled = false;
       });
@@ -715,11 +711,9 @@
           row.remove();
         }
         updateSaveIconButtons();
-        setSavedStatus('Icon deleted.');
       }).catch(function (error) {
         var message = error.message || 'Could not delete icon.';
         setRowStatus(rowStatus, message, true);
-        setSavedStatus(message, true);
         button.disabled = false;
       });
     });
@@ -739,11 +733,10 @@
       formData.append('icons[]', file);
     });
 
-    setSavedStatus('Adding ' + files.length + ' SVG file' + (files.length === 1 ? '' : 's') + '...');
+    setSavedStatus('');
 
     postForm('/api/sprites/' + spriteId + '/icons', formData).then(function (data) {
       if (data.added > 0) {
-        setSavedStatus('Added ' + data.added + ' icon' + (data.added === 1 ? '' : 's') + '.');
         window.location.reload();
         return;
       }
@@ -804,7 +797,6 @@
       setButtons(form.querySelectorAll('button'), true);
     });
     setButtons(saveIconButtons, true);
-    setSavedStatus('Saving ' + dirtyForms.length + ' changed ID' + (dirtyForms.length === 1 ? '' : 's') + '...');
 
     postForm('/api/sprites/' + spriteId + '/icons/update', formData).then(function (data) {
       (data.icons || []).forEach(function (icon) {
@@ -820,14 +812,11 @@
         setCardDirty(form, false);
         setRowStatus(form.querySelector('[data-row-status]'), 'Saved');
       });
-
-      setSavedStatus('Saved ' + (data.icons || []).length + ' ID change' + ((data.icons || []).length === 1 ? '' : 's') + '.');
     }).catch(function (error) {
       var message = error.message || 'Could not save icon changes.';
       dirtyForms.forEach(function (form) {
         setRowStatus(form.querySelector('[data-row-status]'), message, true);
       });
-      setSavedStatus(message, true);
     }).finally(function () {
       dirtyForms.forEach(function (form) {
         form.classList.remove('is-saving');
@@ -884,6 +873,15 @@
 
     element.textContent = message || '';
     element.classList.toggle('is-error', Boolean(isError));
+    window.clearTimeout(element._glyphStatusTimer);
+
+    if (message === 'Saved' && !isError) {
+      element._glyphStatusTimer = window.setTimeout(function () {
+        if (element.textContent === message) {
+          element.textContent = '';
+        }
+      }, 2500);
+    }
   }
 
   function setButtons(buttons, disabled) {
