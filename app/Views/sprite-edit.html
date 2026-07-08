@@ -1,12 +1,12 @@
-<section class="editor-shell" data-sprite-editor data-sprite-id="{{ @sprite.id }}" data-csrf="{{ @csrfToken }}">
+<section class="editor-shell" data-sprite-editor data-sprite-ref="{{ @sprite.public_hash }}" data-csrf="{{ @csrfToken }}">
   <header class="editor-heading">
     <div>
       <h1>{{ @sprite.name }}</h1>
     </div>
     <div class="tool-actions">
-      <a class="button button-primary" href="/api/sprites/{{ @sprite.id }}.svg" data-download-sprite>Download</a>
+      <a class="button button-primary" href="/api/sprites/{{ @sprite.public_hash }}.svg" data-download-sprite>Download</a>
       <button class="button button-secondary" type="button" data-copy-saved-sprite data-copy-label="Copy">Copy</button>
-      <form class="inline-form" method="post" action="/sprites/{{ @sprite.id }}/delete" onsubmit="return confirm('Delete this sprite? This cannot be undone.');">
+      <form class="inline-form" method="post" action="/sprites/{{ @sprite.public_hash }}/delete" onsubmit="return confirm('Delete this sprite? This cannot be undone.');">
         <input type="hidden" name="csrf_token" value="{{ @csrfToken }}">
         <button class="button button-secondary" type="submit">Delete</button>
       </form>
@@ -24,7 +24,7 @@
     </section>
 
     <section class="editor-panel editor-panel-compact settings-panel" aria-labelledby="sprite-settings-title">
-      <form class="metadata-form" method="post" action="/sprites/{{ @sprite.id }}">
+      <form class="metadata-form" method="post" action="/sprites/{{ @sprite.public_hash }}">
         <h2 id="sprite-settings-title">Settings</h2>
         <input type="hidden" name="csrf_token" value="{{ @csrfToken }}">
         <div class="form-grid">
@@ -76,6 +76,19 @@
             Save ID changes
           </button>
         </div>
+        <check if="{{ count(@icons) > 1 }}">
+          <section class="cdn-link-panel" aria-labelledby="cdn-link-title">
+            <div class="cdn-link-copy">
+              <h3 id="cdn-link-title">Development CDN link</h3>
+              <p>Public sprite links are intended for development and testing. They are rate-limited and may be disabled for production hotlinking.</p>
+            </div>
+            <label class="cdn-link-field">
+              <span>Sprite URL</span>
+              <input value="{{ @cdnUrl }}" readonly data-cdn-url-input>
+            </label>
+            <button class="button button-secondary button-small" type="button" data-copy-cdn-url data-copy-label="Copy URL">Copy URL</button>
+          </section>
+        </check>
       </true>
       <false>
         <div class="empty-state">

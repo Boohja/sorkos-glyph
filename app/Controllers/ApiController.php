@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Repositories\IconRepository;
+use App\Repositories\RateLimitRepository;
 use App\Repositories\SpriteRepository;
 use App\Repositories\UserRepository;
 use App\Services\AuthService;
+use App\Services\CdnRateLimiter;
 use App\Services\CsrfService;
 use App\Services\Database;
 use App\Services\SpriteBuilder;
@@ -34,14 +36,15 @@ final class ApiController
             return;
         }
 
-        $spriteId = (int)$f3->get('PARAMS.id');
+        $publicHash = (string)$f3->get('PARAMS.hash');
         $spriteRepo = $this->sprites($f3);
-        $sprite = $spriteRepo->findForUser($spriteId, (int)$currentUser['id']);
+        $sprite = $spriteRepo->findForUserByPublicHash($publicHash, (int)$currentUser['id']);
         if ($sprite === null) {
             $this->json(['ok' => false, 'errors' => [['message' => 'Sprite not found.']]], 404);
             return;
         }
 
+        $spriteId = (int)$sprite['id'];
         $iconRepo = $this->icons($f3);
         $existing = array_map(static fn (array $icon): string => (string)$icon['symbol_id'], $iconRepo->listForSprite($spriteId, (int)$currentUser['id']));
         $results = $this->sanitizeUploads($f3, $existing);
@@ -102,6 +105,9 @@ final class ApiController
             $title !== '' ? $title : null,
             $sortOrder
         );
+        if ($updated) {
+            $this->sprites($f3)->touch((int)$existingIcon['sprite_id'], (int)$currentUser['id']);
+        }
 
         $this->json(['ok' => $updated]);
     }
@@ -119,14 +125,15 @@ final class ApiController
             return;
         }
 
-        $spriteId = (int)$f3->get('PARAMS.id');
+        $publicHash = (string)$f3->get('PARAMS.hash');
         $spriteRepo = $this->sprites($f3);
-        $sprite = $spriteRepo->findForUser($spriteId, (int)$currentUser['id']);
+        $sprite = $spriteRepo->findForUserByPublicHash($publicHash, (int)$currentUser['id']);
         if ($sprite === null) {
             $this->json(['ok' => false, 'errors' => [['message' => 'Sprite not found.']]], 404);
             return;
         }
 
+        $spriteId = (int)$sprite['id'];
         $payload = json_decode((string)$f3->get('POST.icons'), true);
         if (!is_array($payload) || $payload === []) {
             $this->json(['ok' => false, 'errors' => [['message' => 'No icon changes were provided.']]], 400);
@@ -190,7 +197,13 @@ final class ApiController
             return;
         }
 
-        $deleted = $this->icons($f3)->delete((int)$f3->get('PARAMS.id'), (int)$currentUser['id']);
+        $iconId = (int)$f3->get('PARAMS.id');
+        $existingIcon = $this->icons($f3)->findForUser($iconId, (int)$currentUser['id']);
+        $deleted = $this->icons($f3)->delete($iconId, (int)$currentUser['id']);
+        if ($deleted && $existingIcon !== null) {
+            $this->sprites($f3)->touch((int)$existingIcon['sprite_id'], (int)$currentUser['id']);
+        }
+
         $this->json(['ok' => $deleted]);
     }
 
@@ -203,14 +216,15 @@ final class ApiController
             return;
         }
 
-        $spriteId = (int)$f3->get('PARAMS.id');
-        $sprite = $this->sprites($f3)->findForUser($spriteId, (int)$currentUser['id']);
+        $publicHash = (string)$f3->get('PARAMS.hash');
+        $sprite = $this->sprites($f3)->findForUserByPublicHash($publicHash, (int)$currentUser['id']);
         if ($sprite === null) {
             http_response_code(404);
             echo 'Sprite not found.';
             return;
         }
 
+        $spriteId = (int)$sprite['id'];
         $icons = array_map(static function (array $icon): array {
             return [
                 'symbol_id' => $icon['symbol_id'],
@@ -223,6 +237,55 @@ final class ApiController
         header('Content-Type: image/svg+xml; charset=utf-8');
         header('Content-Disposition: attachment; filename="' . preg_replace('/[^a-z0-9-]+/', '-', (string)$sprite['slug']) . '.svg"');
         echo $spriteXml;
+    }
+
+    public function cdnSprite(Base $f3): void
+    {
+        $publicHash = (string)$f3->get('PARAMS.hash');
+        if (!preg_match('/^[A-Za-z0-9]{32,128}$/', $publicHash)) {
+            http_response_code(404);
+            echo 'Sprite not found.';
+            return;
+        }
+
+        $sprite = $this->sprites($f3)->findPublicByHash($publicHash);
+        if ($sprite === null) {
+            http_response_code(404);
+            echo 'Sprite not found.';
+            return;
+        }
+
+        $this->sendCdnCacheHeaders($sprite);
+        if ($this->isClientCacheFresh($sprite)) {
+            http_response_code(304);
+            return;
+        }
+
+        $config = $f3->get('CONFIG');
+        $limiter = new CdnRateLimiter(
+            new RateLimitRepository(Database::connection($f3->get('DB_CONFIG'))),
+            is_array($config['cdn_rate_limits'] ?? null) ? $config['cdn_rate_limits'] : []
+        );
+        $limit = $limiter->allow($this->clientIpAddress(), $publicHash);
+        if (!$limit['allowed']) {
+            http_response_code(429);
+            header('Cache-Control: no-store');
+            header('Content-Type: text/plain; charset=utf-8');
+            header('Retry-After: ' . $limit['retry_after']);
+            echo 'Too many requests. Please try again later.';
+            return;
+        }
+
+        $icons = array_map(static function (array $icon): array {
+            return [
+                'symbol_id' => $icon['symbol_id'],
+                'viewBox' => $icon['view_box'],
+                'symbol_markup' => $icon['symbol_markup'],
+            ];
+        }, $this->icons($f3)->listForSprite((int)$sprite['id'], (int)$sprite['user_id']));
+
+        header('Content-Type: image/svg+xml; charset=utf-8');
+        echo (new SpriteBuilder())->build($icons, (string)$sprite['output_mode']);
     }
 
     public function buildSprite(Base $f3): void
@@ -391,6 +454,50 @@ final class ApiController
     private function icons(Base $f3): IconRepository
     {
         return new IconRepository(Database::connection($f3->get('DB_CONFIG')));
+    }
+
+    /**
+     * @param array<string, mixed> $sprite
+     */
+    private function sendCdnCacheHeaders(array $sprite): void
+    {
+        header('Cache-Control: public, max-age=300, stale-while-revalidate=86400');
+        header('ETag: ' . $this->spriteEtag($sprite));
+
+        $lastModified = strtotime((string)$sprite['updated_at']);
+        if ($lastModified !== false) {
+            header('Last-Modified: ' . gmdate('D, d M Y H:i:s', $lastModified) . ' GMT');
+        }
+    }
+
+    /**
+     * @param array<string, mixed> $sprite
+     */
+    private function isClientCacheFresh(array $sprite): bool
+    {
+        $etag = $this->spriteEtag($sprite);
+        $ifNoneMatch = trim((string)($_SERVER['HTTP_IF_NONE_MATCH'] ?? ''));
+        if ($ifNoneMatch !== '' && $ifNoneMatch === $etag) {
+            return true;
+        }
+
+        $ifModifiedSince = strtotime((string)($_SERVER['HTTP_IF_MODIFIED_SINCE'] ?? ''));
+        $lastModified = strtotime((string)$sprite['updated_at']);
+
+        return $ifModifiedSince !== false && $lastModified !== false && $ifModifiedSince >= $lastModified;
+    }
+
+    /**
+     * @param array<string, mixed> $sprite
+     */
+    private function spriteEtag(array $sprite): string
+    {
+        return '"' . hash('sha256', (string)$sprite['public_hash'] . ':' . (string)$sprite['public_version']) . '"';
+    }
+
+    private function clientIpAddress(): string
+    {
+        return (string)($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
     }
 
     /**

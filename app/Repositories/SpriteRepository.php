@@ -53,12 +53,14 @@ final class SpriteRepository
     public function create(int $userId, string $name, string $slug, string $description = '', string $outputMode = 'pretty'): array
     {
         $slug = $this->uniqueSlug($userId, $slug);
+        $publicHash = $this->uniquePublicHash();
         $statement = $this->pdo->prepare(
-            'INSERT INTO glyph_sprites (user_id, name, slug, description, output_mode)
-             VALUES (:user_id, :name, :slug, :description, :output_mode)'
+            'INSERT INTO glyph_sprites (user_id, public_hash, name, slug, description, output_mode)
+             VALUES (:user_id, :public_hash, :name, :slug, :description, :output_mode)'
         );
         $statement->execute([
             ':user_id' => $userId,
+            ':public_hash' => $publicHash,
             ':name' => $name,
             ':slug' => $slug,
             ':description' => $description !== '' ? $description : null,
@@ -82,12 +84,48 @@ final class SpriteRepository
         return $row ?: null;
     }
 
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function findForUserByPublicHash(string $publicHash, int $userId): ?array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM glyph_sprites WHERE public_hash = :public_hash AND user_id = :user_id AND deleted_at IS NULL'
+        );
+        $statement->execute([':public_hash' => $publicHash, ':user_id' => $userId]);
+        $row = $statement->fetch();
+
+        return $row ?: null;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function findPublicByHash(string $publicHash): ?array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT * FROM glyph_sprites
+             WHERE public_hash = :public_hash
+               AND deleted_at IS NULL
+               AND cdn_enabled = 1
+               AND cdn_disabled_at IS NULL'
+        );
+        $statement->execute([':public_hash' => $publicHash]);
+        $row = $statement->fetch();
+
+        return $row ?: null;
+    }
+
     public function update(int $spriteId, int $userId, string $name, string $slug, ?string $description, string $outputMode): void
     {
         $slug = $this->uniqueSlug($userId, $slug, $spriteId);
         $statement = $this->pdo->prepare(
             'UPDATE glyph_sprites
-             SET name = :name, slug = :slug, description = :description, output_mode = :output_mode
+             SET name = :name,
+                 slug = :slug,
+                 description = :description,
+                 output_mode = :output_mode,
+                 public_version = public_version + 1
              WHERE id = :id AND user_id = :user_id AND deleted_at IS NULL'
         );
         $statement->execute([
@@ -103,7 +141,9 @@ final class SpriteRepository
     public function touch(int $spriteId, int $userId): void
     {
         $statement = $this->pdo->prepare(
-            'UPDATE glyph_sprites SET updated_at = CURRENT_TIMESTAMP WHERE id = :id AND user_id = :user_id'
+            'UPDATE glyph_sprites
+             SET public_version = public_version + 1, updated_at = CURRENT_TIMESTAMP
+             WHERE id = :id AND user_id = :user_id'
         );
         $statement->execute([':id' => $spriteId, ':user_id' => $userId]);
     }
@@ -146,6 +186,23 @@ final class SpriteRepository
 
         $statement = $this->pdo->prepare($sql);
         $statement->execute($params);
+
+        return (int)$statement->fetchColumn() > 0;
+    }
+
+    private function uniquePublicHash(): string
+    {
+        do {
+            $publicHash = bin2hex(random_bytes(16));
+        } while ($this->publicHashExists($publicHash));
+
+        return $publicHash;
+    }
+
+    private function publicHashExists(string $publicHash): bool
+    {
+        $statement = $this->pdo->prepare('SELECT COUNT(*) FROM glyph_sprites WHERE public_hash = :public_hash');
+        $statement->execute([':public_hash' => $publicHash]);
 
         return (int)$statement->fetchColumn() > 0;
     }

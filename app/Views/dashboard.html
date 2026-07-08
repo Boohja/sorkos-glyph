@@ -26,9 +26,9 @@
               </div>
             </div>
             <div class="row-actions">
-              <a class="button button-primary-outline" href="/sprites/{{ @sprite.id }}">Open</a>
-              <a class="button button-secondary" href="/api/sprites/{{ @sprite.id }}.svg">Download</a>
-              <form method="post" action="/sprites/{{ @sprite.id }}/delete" onsubmit="return confirm('Delete this saved sprite?');">
+              <a class="button button-primary-outline" href="/sprites/{{ @sprite.public_hash }}">Open</a>
+              <a class="button button-secondary" href="/api/sprites/{{ @sprite.public_hash }}.svg">Download</a>
+              <form method="post" action="/sprites/{{ @sprite.public_hash }}/delete" onsubmit="return confirm('Delete this saved sprite?');">
                 <input type="hidden" name="csrf_token" value="{{ @csrfToken }}">
                 <button class="button button-secondary" type="submit">Delete</button>
               </form>

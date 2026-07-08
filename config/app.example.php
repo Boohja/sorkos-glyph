@@ -23,6 +23,15 @@ return [
         'max_icons_per_saved_sprite' => 500,
     ],
 
+    'cdn_rate_limits' => [
+        'per_ip_sprite_limit' => 120,
+        'per_ip_sprite_window_seconds' => 60,
+        'per_ip_limit' => 600,
+        'per_ip_window_seconds' => 600,
+        'per_sprite_limit' => 5000,
+        'per_sprite_window_seconds' => 86400,
+    ],
+
     'auth' => [
         'base_url' => 'https://auth.test',
         'client_id' => 'glyph-local-client-id',

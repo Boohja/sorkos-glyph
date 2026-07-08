@@ -568,7 +568,7 @@
     return;
   }
 
-  var spriteId = editor.getAttribute('data-sprite-id');
+  var spriteRef = editor.getAttribute('data-sprite-ref');
   var csrfToken = editor.getAttribute('data-csrf');
   var dropzone = editor.querySelector('[data-saved-dropzone]');
   var fileInput = editor.querySelector('[data-saved-file-input]');
@@ -576,6 +576,8 @@
   var saveIconButtons = editor.querySelectorAll('[data-save-icon-changes]');
   var downloadSprite = editor.querySelector('[data-download-sprite]');
   var copySprite = editor.querySelector('[data-copy-saved-sprite]');
+  var copyCdnUrl = editor.querySelector('[data-copy-cdn-url]');
+  var cdnUrlInput = editor.querySelector('[data-cdn-url-input]');
 
   if (dropzone && fileInput) {
     dropzone.addEventListener('dragover', function (event) {
@@ -670,6 +672,16 @@
     });
   }
 
+  if (copyCdnUrl && cdnUrlInput) {
+    copyCdnUrl.addEventListener('click', function () {
+      navigator.clipboard.writeText(cdnUrlInput.value).then(function () {
+        flashSavedButton(copyCdnUrl, 'Copied');
+      }).catch(function () {
+        cdnUrlInput.select();
+      });
+    });
+  }
+
   editor.querySelectorAll('[data-details-toggle]').forEach(function (button) {
     button.addEventListener('click', function (event) {
       event.stopPropagation();
@@ -735,7 +747,7 @@
 
     setSavedStatus('');
 
-    postForm('/api/sprites/' + spriteId + '/icons', formData).then(function (data) {
+    postForm('/api/sprites/' + spriteRef + '/icons', formData).then(function (data) {
       if (data.added > 0) {
         window.location.reload();
         return;
@@ -798,7 +810,7 @@
     });
     setButtons(saveIconButtons, true);
 
-    postForm('/api/sprites/' + spriteId + '/icons/update', formData).then(function (data) {
+    postForm('/api/sprites/' + spriteRef + '/icons/update', formData).then(function (data) {
       (data.icons || []).forEach(function (icon) {
         var form = editor.querySelector('[data-icon-form="' + icon.id + '"]');
         var input = form ? form.querySelector('input[name="symbol_id"]') : null;

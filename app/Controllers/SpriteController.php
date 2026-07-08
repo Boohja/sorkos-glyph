@@ -30,7 +30,7 @@ final class SpriteController
 
         $sprite = $this->sprites($f3)->create((int)$currentUser['id'], 'New sprite', 'sprite', '', 'pretty');
 
-        $f3->reroute('/sprites/' . $sprite['id']);
+        $f3->reroute('/sprites/' . $sprite['public_hash']);
     }
 
     public function edit(Base $f3): void
@@ -40,13 +40,14 @@ final class SpriteController
             return;
         }
 
-        $spriteId = (int)$f3->get('PARAMS.id');
-        $sprite = $this->sprites($f3)->findForUser($spriteId, (int)$currentUser['id']);
+        $publicHash = (string)$f3->get('PARAMS.hash');
+        $sprite = $this->sprites($f3)->findForUserByPublicHash($publicHash, (int)$currentUser['id']);
         if ($sprite === null) {
             $this->message($f3, 'Sprite not found', 'That sprite does not exist or is not available to this account.', 404);
             return;
         }
 
+        $spriteId = (int)$sprite['id'];
         $icons = array_map([$this, 'prepareIcon'], $this->icons($f3)->listForSprite($spriteId, (int)$currentUser['id']));
         $config = $f3->get('CONFIG');
 
@@ -57,6 +58,7 @@ final class SpriteController
         $f3->set('authLoginUrl', '/auth/login');
         $f3->set('sprite', $sprite);
         $f3->set('icons', $icons);
+        $f3->set('cdnUrl', $this->absoluteUrl($config, '/cdn/sprites/' . $sprite['public_hash'] . '.svg'));
         $f3->set('content', 'sprite-edit.html');
 
         echo Template::instance()->render('layout.html');
@@ -74,7 +76,14 @@ final class SpriteController
             return;
         }
 
-        $spriteId = (int)$f3->get('PARAMS.id');
+        $publicHash = (string)$f3->get('PARAMS.hash');
+        $sprite = $this->sprites($f3)->findForUserByPublicHash($publicHash, (int)$currentUser['id']);
+        if ($sprite === null) {
+            $this->message($f3, 'Sprite not found', 'That sprite does not exist or is not available to this account.', 404);
+            return;
+        }
+
+        $spriteId = (int)$sprite['id'];
         $name = trim((string)$f3->get('POST.name'));
         if ($name === '') {
             $name = 'Untitled sprite';
@@ -85,7 +94,7 @@ final class SpriteController
         $outputMode = (string)$f3->get('POST.output_mode');
 
         $this->sprites($f3)->update($spriteId, (int)$currentUser['id'], $name, $slug, $description, $outputMode);
-        $f3->reroute('/sprites/' . $spriteId);
+        $f3->reroute('/sprites/' . $publicHash);
     }
 
     public function delete(Base $f3): void
@@ -100,7 +109,12 @@ final class SpriteController
             return;
         }
 
-        $this->sprites($f3)->softDelete((int)$f3->get('PARAMS.id'), (int)$currentUser['id']);
+        $publicHash = (string)$f3->get('PARAMS.hash');
+        $sprite = $this->sprites($f3)->findForUserByPublicHash($publicHash, (int)$currentUser['id']);
+        if ($sprite !== null) {
+            $this->sprites($f3)->softDelete((int)$sprite['id'], (int)$currentUser['id']);
+        }
+
         $f3->reroute('/sprites');
     }
 
@@ -186,5 +200,15 @@ final class SpriteController
         $f3->set('content', 'message.html');
 
         echo Template::instance()->render('layout.html');
+    }
+
+    /**
+     * @param array<string, mixed> $config
+     */
+    private function absoluteUrl(array $config, string $path): string
+    {
+        $baseUrl = rtrim((string)($config['app']['base_url'] ?? ''), '/');
+
+        return ($baseUrl !== '' ? $baseUrl : '') . $path;
     }
 }
