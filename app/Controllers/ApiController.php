@@ -224,6 +224,20 @@ final class ApiController
             return;
         }
 
+        if ($this->isCrossSiteSubresourceRequest($f3)) {
+            http_response_code(403);
+            header('Cache-Control: no-store');
+            header('Content-Type: text/plain; charset=utf-8');
+            echo 'Use the public CDN endpoint for sprite references.';
+            return;
+        }
+
+        $limit = $this->checkSpriteDeliveryLimit($f3, $publicHash);
+        if (!$limit['allowed']) {
+            $this->rateLimited($limit['retry_after']);
+            return;
+        }
+
         $spriteId = (int)$sprite['id'];
         $icons = array_map(static function (array $icon): array {
             return [
@@ -234,6 +248,8 @@ final class ApiController
         }, $this->icons($f3)->listForSprite($spriteId, (int)$currentUser['id']));
 
         $spriteXml = (new SpriteBuilder())->build($icons, (string)$sprite['output_mode']);
+        header('Cache-Control: private, no-store');
+        header('X-Robots-Tag: noindex, nofollow');
         header('Content-Type: image/svg+xml; charset=utf-8');
         header('Content-Disposition: attachment; filename="' . preg_replace('/[^a-z0-9-]+/', '-', (string)$sprite['slug']) . '.svg"');
         echo $spriteXml;
@@ -261,18 +277,9 @@ final class ApiController
             return;
         }
 
-        $config = $f3->get('CONFIG');
-        $limiter = new CdnRateLimiter(
-            new RateLimitRepository(Database::connection($f3->get('DB_CONFIG'))),
-            is_array($config['cdn_rate_limits'] ?? null) ? $config['cdn_rate_limits'] : []
-        );
-        $limit = $limiter->allow($this->clientIpAddress(), $publicHash);
+        $limit = $this->checkSpriteDeliveryLimit($f3, $publicHash);
         if (!$limit['allowed']) {
-            http_response_code(429);
-            header('Cache-Control: no-store');
-            header('Content-Type: text/plain; charset=utf-8');
-            header('Retry-After: ' . $limit['retry_after']);
-            echo 'Too many requests. Please try again later.';
+            $this->rateLimited($limit['retry_after']);
             return;
         }
 
@@ -493,6 +500,67 @@ final class ApiController
     private function spriteEtag(array $sprite): string
     {
         return '"' . hash('sha256', (string)$sprite['public_hash'] . ':' . (string)$sprite['public_version']) . '"';
+    }
+
+    /**
+     * @return array{allowed: bool, retry_after: int}
+     */
+    private function checkSpriteDeliveryLimit(Base $f3, string $publicHash): array
+    {
+        $config = $f3->get('CONFIG');
+        $limiter = new CdnRateLimiter(
+            new RateLimitRepository(Database::connection($f3->get('DB_CONFIG'))),
+            is_array($config['cdn_rate_limits'] ?? null) ? $config['cdn_rate_limits'] : []
+        );
+
+        return $limiter->allow($this->clientIpAddress(), $publicHash);
+    }
+
+    private function rateLimited(int $retryAfter): void
+    {
+        http_response_code(429);
+        header('Cache-Control: no-store');
+        header('Content-Type: text/plain; charset=utf-8');
+        header('Retry-After: ' . $retryAfter);
+        echo 'Too many requests. Please try again later.';
+    }
+
+    private function isCrossSiteSubresourceRequest(Base $f3): bool
+    {
+        $fetchSite = strtolower((string)($_SERVER['HTTP_SEC_FETCH_SITE'] ?? ''));
+        if ($fetchSite !== '' && !in_array($fetchSite, ['same-origin', 'none'], true)) {
+            return true;
+        }
+
+        $origin = (string)($_SERVER['HTTP_ORIGIN'] ?? '');
+        if ($origin !== '' && !$this->sameConfiguredOrigin($f3, $origin)) {
+            return true;
+        }
+
+        $referer = (string)($_SERVER['HTTP_REFERER'] ?? '');
+
+        return $referer !== '' && !$this->sameConfiguredOrigin($f3, $referer);
+    }
+
+    private function sameConfiguredOrigin(Base $f3, string $url): bool
+    {
+        $config = $f3->get('CONFIG');
+        $baseUrl = (string)($config['app']['base_url'] ?? '');
+        $baseParts = parse_url($baseUrl);
+        $urlParts = parse_url($url);
+
+        if (!is_array($baseParts) || !is_array($urlParts)) {
+            return false;
+        }
+
+        $baseScheme = strtolower((string)($baseParts['scheme'] ?? ''));
+        $urlScheme = strtolower((string)($urlParts['scheme'] ?? ''));
+        $baseHost = strtolower((string)($baseParts['host'] ?? ''));
+        $urlHost = strtolower((string)($urlParts['host'] ?? ''));
+        $basePort = (int)($baseParts['port'] ?? ($baseScheme === 'https' ? 443 : 80));
+        $urlPort = (int)($urlParts['port'] ?? ($urlScheme === 'https' ? 443 : 80));
+
+        return $baseScheme === $urlScheme && $baseHost === $urlHost && $basePort === $urlPort;
     }
 
     private function clientIpAddress(): string
