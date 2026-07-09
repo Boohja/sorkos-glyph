@@ -40,6 +40,10 @@ $f3->set('DB_CONFIG', $dbConfig);
 $f3->set('SETUP_WARNING', !is_file($appConfigPath) || !is_file($dbConfigPath));
 $f3->set('DEBUG', !empty($appConfig['app']['debug']) ? 3 : 0);
 
+$requestPath = (string)(parse_url((string)($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH) ?: '/');
+$isPublicCdnSpriteRequest = ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET'
+    && preg_match('#^/cdn/sprites/[A-Za-z0-9]{32,128}\.svg$#', $requestPath) === 1;
+
 $security = $appConfig['security'] ?? [];
 session_name((string)($security['session_name'] ?? 'glyph_session'));
 session_set_cookie_params([
@@ -51,7 +55,7 @@ session_set_cookie_params([
     'samesite' => (string)($security['session_samesite'] ?? 'Lax'),
 ]);
 
-if (session_status() !== PHP_SESSION_ACTIVE) {
+if (!$isPublicCdnSpriteRequest && session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
 

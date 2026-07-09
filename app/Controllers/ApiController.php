@@ -291,7 +291,6 @@ final class ApiController
             ];
         }, $this->icons($f3)->listForSprite((int)$sprite['id'], (int)$sprite['user_id']));
 
-        header('Content-Type: image/svg+xml; charset=utf-8');
         echo (new SpriteBuilder())->build($icons, (string)$sprite['output_mode']);
     }
 
@@ -468,6 +467,8 @@ final class ApiController
      */
     private function sendCdnCacheHeaders(array $sprite): void
     {
+        $this->sendPublicSpriteAccessHeaders();
+        header('Content-Type: image/svg+xml; charset=utf-8');
         header('Cache-Control: public, max-age=300, stale-while-revalidate=86400');
         header('ETag: ' . $this->spriteEtag($sprite));
 
@@ -475,6 +476,13 @@ final class ApiController
         if ($lastModified !== false) {
             header('Last-Modified: ' . gmdate('D, d M Y H:i:s', $lastModified) . ' GMT');
         }
+    }
+
+    private function sendPublicSpriteAccessHeaders(): void
+    {
+        header('Access-Control-Allow-Origin: *');
+        header('Cross-Origin-Resource-Policy: cross-origin');
+        header('Timing-Allow-Origin: *');
     }
 
     /**
@@ -519,6 +527,7 @@ final class ApiController
     private function rateLimited(int $retryAfter): void
     {
         http_response_code(429);
+        $this->sendPublicSpriteAccessHeaders();
         header('Cache-Control: no-store');
         header('Content-Type: text/plain; charset=utf-8');
         header('Retry-After: ' . $retryAfter);
