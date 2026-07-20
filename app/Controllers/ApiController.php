@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Repositories\IconRepository;
+use App\Repositories\FontArtifactRepository;
 use App\Repositories\RateLimitRepository;
 use App\Repositories\SpriteRepository;
 use App\Repositories\UserRepository;
@@ -12,12 +13,15 @@ use App\Services\AuthService;
 use App\Services\CdnRateLimiter;
 use App\Services\CsrfService;
 use App\Services\Database;
+use App\Services\IconFontCssBuilder;
+use App\Services\IconFontGenerator;
 use App\Services\SpriteBuilder;
 use App\Services\SvgSanitizer;
 use Base;
 
 final class ApiController
 {
+
     public function sanitize(Base $f3): void
     {
         $this->json(['ok' => true, 'icons' => $this->sanitizeUploads($f3)]);
@@ -59,6 +63,7 @@ final class ApiController
 
         if ($added > 0) {
             $spriteRepo->touch($spriteId, (int)$currentUser['id']);
+            $this->generateFont($f3, $spriteRepo->findForUser($spriteId, (int)$currentUser['id']));
         }
 
         $this->json(['ok' => true, 'added' => $added, 'icons' => $results]);
@@ -106,10 +111,58 @@ final class ApiController
             $sortOrder
         );
         if ($updated) {
-            $this->sprites($f3)->touch((int)$existingIcon['sprite_id'], (int)$currentUser['id']);
+            $spriteRepo = $this->sprites($f3);
+            $spriteRepo->touch((int)$existingIcon['sprite_id'], (int)$currentUser['id']);
+            $this->generateFont($f3, $spriteRepo->findForUser((int)$existingIcon['sprite_id'], (int)$currentUser['id']));
         }
 
         $this->json(['ok' => $updated]);
+    }
+
+    public function replaceIconSource(Base $f3): void
+    {
+        $currentUser = $this->currentUser($f3);
+        if ($currentUser === null) {
+            $this->json(['ok' => false, 'errors' => [['message' => 'Authentication required.']]], 401);
+            return;
+        }
+
+        if (!$this->verifyCsrf($f3)) {
+            $this->json(['ok' => false, 'errors' => [['message' => 'The SVG update could not be verified.']]], 400);
+            return;
+        }
+
+        $iconId = (int)$f3->get('PARAMS.id');
+        $iconRepo = $this->icons($f3);
+        $existingIcon = $iconRepo->findForUser($iconId, (int)$currentUser['id']);
+        if ($existingIcon === null) {
+            $this->json(['ok' => false, 'errors' => [['message' => 'Icon not found.']]], 404);
+            return;
+        }
+
+        $result = $this->sanitizeSvgSource(
+            $f3,
+            (string)$existingIcon['symbol_id'] . '.svg',
+            (string)$f3->get('POST.svg_source')
+        );
+        if (($result['ok'] ?? false) !== true) {
+            $errors = array_map(
+                static fn ($message): array => ['message' => (string)$message],
+                is_array($result['errors'] ?? null) ? $result['errors'] : ['The SVG could not be processed.']
+            );
+            $this->json(['ok' => false, 'errors' => $errors], 422);
+            return;
+        }
+
+        if (!$iconRepo->replaceSource($iconId, (int)$currentUser['id'], $result)) {
+            $this->json(['ok' => false, 'errors' => [['message' => 'Icon not found.']]], 404);
+            return;
+        }
+
+        $spriteRepo = $this->sprites($f3);
+        $spriteRepo->touch((int)$existingIcon['sprite_id'], (int)$currentUser['id']);
+        $this->generateFont($f3, $spriteRepo->findForUser((int)$existingIcon['sprite_id'], (int)$currentUser['id']));
+        $this->json(['ok' => true]);
     }
 
     public function updateIcons(Base $f3): void
@@ -179,9 +232,59 @@ final class ApiController
 
         if ($updated !== []) {
             $spriteRepo->touch($spriteId, (int)$currentUser['id']);
+            $this->generateFont($f3, $spriteRepo->findForUser($spriteId, (int)$currentUser['id']));
         }
 
         $this->json(['ok' => true, 'icons' => $updated]);
+    }
+
+    public function updateFontCdn(Base $f3): void
+    {
+        $currentUser = $this->currentUser($f3);
+        if ($currentUser === null) {
+            $this->json(['ok' => false, 'errors' => [['message' => 'Authentication required.']]], 401);
+            return;
+        }
+
+        if (!$this->verifyCsrf($f3)) {
+            $this->json(['ok' => false, 'errors' => [['message' => 'The CDN update could not be verified.']]], 400);
+            return;
+        }
+
+        $publicHash = (string)$f3->get('PARAMS.hash');
+        $spriteRepo = $this->sprites($f3);
+        $sprite = $spriteRepo->findForUserByPublicHash($publicHash, (int)$currentUser['id']);
+        if ($sprite === null) {
+            $this->json(['ok' => false, 'errors' => [['message' => 'Sprite not found.']]], 404);
+            return;
+        }
+
+        $enabled = (string)$f3->get('POST.enabled') === '1';
+        $spriteRepo->setFontCdnEnabled((int)$sprite['id'], (int)$currentUser['id'], $enabled);
+        $this->json(['ok' => true, 'enabled' => $enabled]);
+    }
+
+    public function dismissIconMessage(Base $f3): void
+    {
+        $currentUser = $this->currentUser($f3);
+        if ($currentUser === null) {
+            $this->json(['ok' => false, 'errors' => [['message' => 'Authentication required.']]], 401);
+            return;
+        }
+        if (!$this->verifyCsrf($f3)) {
+            $this->json(['ok' => false, 'errors' => [['message' => 'The message update could not be verified.']]], 400);
+            return;
+        }
+
+        $iconId = (int)$f3->get('PARAMS.id');
+        $message = trim((string)$f3->get('POST.message'));
+        $dismissed = $this->icons($f3)->dismissMessage($iconId, (int)$currentUser['id'], $message);
+        if (!$dismissed) {
+            $this->json(['ok' => false, 'errors' => [['message' => 'Message not found.']]], 404);
+            return;
+        }
+
+        $this->json(['ok' => true]);
     }
 
     public function deleteIcon(Base $f3): void
@@ -201,7 +304,9 @@ final class ApiController
         $existingIcon = $this->icons($f3)->findForUser($iconId, (int)$currentUser['id']);
         $deleted = $this->icons($f3)->delete($iconId, (int)$currentUser['id']);
         if ($deleted && $existingIcon !== null) {
-            $this->sprites($f3)->touch((int)$existingIcon['sprite_id'], (int)$currentUser['id']);
+            $spriteRepo = $this->sprites($f3);
+            $spriteRepo->touch((int)$existingIcon['sprite_id'], (int)$currentUser['id']);
+            $this->generateFont($f3, $spriteRepo->findForUser((int)$existingIcon['sprite_id'], (int)$currentUser['id']));
         }
 
         $this->json(['ok' => $deleted]);
@@ -224,74 +329,169 @@ final class ApiController
             return;
         }
 
-        if ($this->isCrossSiteSubresourceRequest($f3)) {
-            http_response_code(403);
-            header('Cache-Control: no-store');
-            header('Content-Type: text/plain; charset=utf-8');
-            echo 'Use the public CDN endpoint for sprite references.';
-            return;
-        }
+        $icons = array_map(static fn (array $icon): array => [
+            'symbol_id' => $icon['symbol_id'],
+            'viewBox' => $icon['view_box'],
+            'symbol_markup' => $icon['symbol_markup'],
+        ], $this->icons($f3)->listForSprite((int)$sprite['id'], (int)$currentUser['id']));
 
-        $limit = $this->checkSpriteDeliveryLimit($f3, $publicHash);
-        if (!$limit['allowed']) {
-            $this->rateLimited($limit['retry_after']);
-            return;
-        }
-
-        $spriteId = (int)$sprite['id'];
-        $icons = array_map(static function (array $icon): array {
-            return [
-                'symbol_id' => $icon['symbol_id'],
-                'viewBox' => $icon['view_box'],
-                'symbol_markup' => $icon['symbol_markup'],
-            ];
-        }, $this->icons($f3)->listForSprite($spriteId, (int)$currentUser['id']));
-
-        $spriteXml = (new SpriteBuilder())->build($icons, (string)$sprite['output_mode']);
+        $spriteXml = (new SpriteBuilder())->build($icons, 'pretty');
         header('Cache-Control: private, no-store');
         header('X-Robots-Tag: noindex, nofollow');
         header('Content-Type: image/svg+xml; charset=utf-8');
-        header('Content-Disposition: attachment; filename="' . preg_replace('/[^a-z0-9-]+/', '-', (string)$sprite['slug']) . '.svg"');
+        header('Content-Disposition: attachment; filename="' . (string)$sprite['slug'] . '.svg"');
         echo $spriteXml;
     }
 
-    public function cdnSprite(Base $f3): void
+    public function downloadIcon(Base $f3): void
     {
-        $publicHash = (string)$f3->get('PARAMS.hash');
-        if (!preg_match('/^[A-Za-z0-9]{32,128}$/', $publicHash)) {
-            http_response_code(404);
-            echo 'Sprite not found.';
+        $currentUser = $this->currentUser($f3);
+        if ($currentUser === null) {
+            http_response_code(401);
+            echo 'Authentication required.';
             return;
         }
 
-        $sprite = $this->sprites($f3)->findPublicByHash($publicHash);
+        $icon = $this->icons($f3)->findForUser((int)$f3->get('PARAMS.id'), (int)$currentUser['id']);
+        if ($icon === null) {
+            http_response_code(404);
+            echo 'Icon not found.';
+            return;
+        }
+
+        $viewBox = htmlspecialchars((string)$icon['view_box'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="' . $viewBox . '">' . "\n"
+            . trim((string)$icon['symbol_markup']) . "\n</svg>\n";
+
+        header('Cache-Control: private, no-store');
+        header('X-Robots-Tag: noindex, nofollow');
+        header('Content-Type: image/svg+xml; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . (string)$icon['symbol_id'] . '.svg"');
+        echo $svg;
+    }
+
+    public function downloadFont(Base $f3): void
+    {
+        $currentUser = $this->currentUser($f3);
+        if ($currentUser === null) {
+            http_response_code(401);
+            echo 'Authentication required.';
+            return;
+        }
+
+        $publicHash = (string)$f3->get('PARAMS.hash');
+        $sprite = $this->sprites($f3)->findForUserByPublicHash($publicHash, (int)$currentUser['id']);
         if ($sprite === null) {
             http_response_code(404);
             echo 'Sprite not found.';
             return;
         }
 
-        $this->sendCdnCacheHeaders($sprite);
-        if ($this->isClientCacheFresh($sprite)) {
-            http_response_code(304);
+        $extension = strtolower((string)$f3->get('PARAMS.extension'));
+        if (!in_array($extension, ['woff', 'woff2'], true)) {
+            http_response_code(404);
+            return;
+        }
+        $artifact = $this->artifacts($f3)->findForSprite((int)$sprite['id']);
+        $hash = is_array($artifact) && ($artifact['status'] ?? '') === 'ready'
+            ? (string)$artifact[$extension . '_hash']
+            : '';
+        $path = $this->fontGenerator($f3)->artifactPath($hash, $extension);
+        if ($path === '' || !is_file($path)) {
+            http_response_code(404);
+            echo 'Font not available.';
             return;
         }
 
+        header('Cache-Control: private, no-store');
+        header('X-Robots-Tag: noindex, nofollow');
+        header('Content-Type: font/' . $extension);
+        header('Content-Length: ' . filesize($path));
+        header('Content-Disposition: attachment; filename="' . (string)$sprite['slug'] . '.' . $extension . '"');
+        readfile($path);
+    }
+
+    public function downloadFontCss(Base $f3): void
+    {
+        $currentUser = $this->currentUser($f3);
+        if ($currentUser === null) {
+            http_response_code(401);
+            echo 'Authentication required.';
+            return;
+        }
+        $publicHash = (string)$f3->get('PARAMS.hash');
+        $sprite = $this->sprites($f3)->findForUserByPublicHash($publicHash, (int)$currentUser['id']);
+        $artifact = $sprite ? $this->artifacts($f3)->findForSprite((int)$sprite['id']) : null;
+        if ($sprite === null || !is_array($artifact) || ($artifact['status'] ?? '') !== 'ready') {
+            http_response_code(404);
+            echo 'Font not available.';
+            return;
+        }
+        $icons = $this->icons($f3)->listForSprite((int)$sprite['id'], (int)$currentUser['id']);
+        $css = (new IconFontCssBuilder())->build($sprite, $icons, './' . (string)$sprite['slug'] . '.woff2');
+        header('Cache-Control: private, no-store');
+        header('Content-Type: text/css; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . (string)$sprite['slug'] . '.css"');
+        echo $css;
+    }
+
+    public function cdnFontCss(Base $f3): void
+    {
+        $publicHash = (string)$f3->get('PARAMS.hash');
+        $artifact = $this->artifacts($f3)->findPublicByHash($publicHash);
+        if ($artifact === null) {
+            http_response_code(404);
+            echo 'Font not found.';
+            return;
+        }
+        $etag = '"' . hash('sha256', 'font-css-v1:' . $artifact['slug'] . ':' . $artifact['woff2_hash']) . '"';
+        $this->sendPublicFontAccessHeaders();
+        header('Content-Type: text/css; charset=utf-8');
+        header('Cache-Control: public, max-age=300, stale-while-revalidate=86400');
+        header('ETag: ' . $etag);
+        if (trim((string)($_SERVER['HTTP_IF_NONE_MATCH'] ?? '')) === $etag) {
+            http_response_code(304);
+            return;
+        }
         $limit = $this->checkSpriteDeliveryLimit($f3, $publicHash);
         if (!$limit['allowed']) {
             $this->rateLimited($limit['retry_after']);
             return;
         }
+        $icons = $this->icons($f3)->listForSprite((int)$artifact['sprite_id'], (int)$artifact['user_id']);
+        $fontUrl = '/cdn/fonts/' . $publicHash . '/' . $artifact['woff2_hash'] . '.woff2';
+        echo (new IconFontCssBuilder())->build($artifact, $icons, $fontUrl);
+    }
 
-        $icons = array_map(static function (array $icon): array {
-            return [
-                'symbol_id' => $icon['symbol_id'],
-                'viewBox' => $icon['view_box'],
-                'symbol_markup' => $icon['symbol_markup'],
-            ];
-        }, $this->icons($f3)->listForSprite((int)$sprite['id'], (int)$sprite['user_id']));
-
-        echo (new SpriteBuilder())->build($icons, (string)$sprite['output_mode']);
+    public function cdnFont(Base $f3): void
+    {
+        $publicHash = (string)$f3->get('PARAMS.hash');
+        $requestedHash = strtolower((string)$f3->get('PARAMS.artifact'));
+        $extension = strtolower((string)$f3->get('PARAMS.extension'));
+        $artifact = $this->artifacts($f3)->findPublicByHash($publicHash);
+        $hashKey = $extension . '_hash';
+        if ($artifact === null || !in_array($extension, ['woff', 'woff2'], true)
+            || !isset($artifact[$hashKey]) || !hash_equals((string)$artifact[$hashKey], $requestedHash)) {
+            http_response_code(404);
+            echo 'Font not found.';
+            return;
+        }
+        $path = $this->fontGenerator($f3)->artifactPath($requestedHash, $extension);
+        if ($path === '' || !is_file($path)) {
+            http_response_code(404);
+            return;
+        }
+        $limit = $this->checkSpriteDeliveryLimit($f3, $publicHash);
+        if (!$limit['allowed']) {
+            $this->rateLimited($limit['retry_after']);
+            return;
+        }
+        $this->sendPublicFontAccessHeaders();
+        header('Content-Type: font/' . $extension);
+        header('Content-Length: ' . filesize($path));
+        header('Cache-Control: public, max-age=31536000, immutable');
+        header('ETag: "' . $requestedHash . '"');
+        readfile($path);
     }
 
     public function buildSprite(Base $f3): void
@@ -386,7 +586,6 @@ final class ApiController
     {
         $config = $f3->get('CONFIG');
         $limits = $config['uploads'] ?? [];
-        $maxFileSize = (int)($limits['max_file_size_bytes'] ?? 200000);
         $maxFiles = (int)($limits['max_files_per_batch'] ?? 50);
         $files = $this->uploadedFiles('icons');
 
@@ -398,7 +597,6 @@ final class ApiController
             return [['ok' => false, 'filename' => '', 'errors' => ['Too many files in this batch.']]];
         }
 
-        $sanitizer = new SvgSanitizer();
         $results = [];
         $symbolIds = $existingSymbolIds;
 
@@ -410,21 +608,19 @@ final class ApiController
                 continue;
             }
 
-            if ((int)$file['size'] > $maxFileSize) {
+            if ($this->svgSourceExceedsLimit($f3, (int)$file['size'])) {
                 $results[] = ['ok' => false, 'filename' => $filename, 'errors' => ['SVG exceeds the configured file size limit.']];
                 continue;
             }
 
-            if (strtolower(pathinfo($filename, PATHINFO_EXTENSION)) !== 'svg') {
-                $results[] = ['ok' => false, 'filename' => $filename, 'errors' => ['Only .svg files are accepted.']];
-                continue;
-            }
-
             $content = file_get_contents((string)$file['tmp_name']);
-            $result = $sanitizer->sanitize([
-                'filename' => $filename,
-                'content' => $content !== false ? $content : '',
-            ], $symbolIds, true);
+            $result = $this->sanitizeSvgSource(
+                $f3,
+                $filename,
+                $content !== false ? $content : '',
+                $symbolIds,
+                (int)$file['size']
+            );
 
             if (($result['ok'] ?? false) === true) {
                 $symbolIds[] = (string)$result['symbol_id'];
@@ -434,6 +630,40 @@ final class ApiController
         }
 
         return $results;
+    }
+
+    /**
+     * @param array<int, string> $existingSymbolIds
+     * @return array<string, mixed>
+     */
+    private function sanitizeSvgSource(
+        Base $f3,
+        string $filename,
+        string $content,
+        array $existingSymbolIds = [],
+        ?int $reportedSize = null
+    ): array {
+        $size = $reportedSize ?? strlen($content);
+
+        if ($this->svgSourceExceedsLimit($f3, $size) || $this->svgSourceExceedsLimit($f3, strlen($content))) {
+            return ['ok' => false, 'filename' => $filename, 'errors' => ['SVG exceeds the configured file size limit.']];
+        }
+
+        if (strtolower(pathinfo($filename, PATHINFO_EXTENSION)) !== 'svg') {
+            return ['ok' => false, 'filename' => $filename, 'errors' => ['Only .svg files are accepted.']];
+        }
+
+        return (new SvgSanitizer())->sanitize([
+            'filename' => $filename,
+            'content' => $content,
+        ], $existingSymbolIds, true);
+    }
+
+    private function svgSourceExceedsLimit(Base $f3, int $size): bool
+    {
+        $config = $f3->get('CONFIG');
+        $limits = $config['uploads'] ?? [];
+        return $size > (int)($limits['max_file_size_bytes'] ?? 200000);
     }
 
     /**
@@ -462,52 +692,34 @@ final class ApiController
         return new IconRepository(Database::connection($f3->get('DB_CONFIG')));
     }
 
-    /**
-     * @param array<string, mixed> $sprite
-     */
-    private function sendCdnCacheHeaders(array $sprite): void
+    private function artifacts(Base $f3): FontArtifactRepository
     {
-        $this->sendPublicSpriteAccessHeaders();
-        header('Content-Type: image/svg+xml; charset=utf-8');
-        header('Cache-Control: public, max-age=300, stale-while-revalidate=86400');
-        header('ETag: ' . $this->spriteEtag($sprite));
+        return new FontArtifactRepository(Database::connection($f3->get('DB_CONFIG')));
+    }
 
-        $lastModified = strtotime((string)$sprite['updated_at']);
-        if ($lastModified !== false) {
-            header('Last-Modified: ' . gmdate('D, d M Y H:i:s', $lastModified) . ' GMT');
+    private function fontGenerator(Base $f3): IconFontGenerator
+    {
+        return new IconFontGenerator(
+            $this->icons($f3),
+            $this->artifacts($f3),
+            is_array($f3->get('CONFIG')) ? $f3->get('CONFIG') : [],
+            (string)$f3->get('ROOT')
+        );
+    }
+
+    /** @param array<string, mixed>|null $sprite */
+    private function generateFont(Base $f3, ?array $sprite): void
+    {
+        if ($sprite !== null) {
+            $this->fontGenerator($f3)->generate($sprite);
         }
     }
 
-    private function sendPublicSpriteAccessHeaders(): void
+    private function sendPublicFontAccessHeaders(): void
     {
         header('Access-Control-Allow-Origin: *');
         header('Cross-Origin-Resource-Policy: cross-origin');
         header('Timing-Allow-Origin: *');
-    }
-
-    /**
-     * @param array<string, mixed> $sprite
-     */
-    private function isClientCacheFresh(array $sprite): bool
-    {
-        $etag = $this->spriteEtag($sprite);
-        $ifNoneMatch = trim((string)($_SERVER['HTTP_IF_NONE_MATCH'] ?? ''));
-        if ($ifNoneMatch !== '' && $ifNoneMatch === $etag) {
-            return true;
-        }
-
-        $ifModifiedSince = strtotime((string)($_SERVER['HTTP_IF_MODIFIED_SINCE'] ?? ''));
-        $lastModified = strtotime((string)$sprite['updated_at']);
-
-        return $ifModifiedSince !== false && $lastModified !== false && $ifModifiedSince >= $lastModified;
-    }
-
-    /**
-     * @param array<string, mixed> $sprite
-     */
-    private function spriteEtag(array $sprite): string
-    {
-        return '"' . hash('sha256', (string)$sprite['public_hash'] . ':' . (string)$sprite['public_version']) . '"';
     }
 
     /**
@@ -527,49 +739,11 @@ final class ApiController
     private function rateLimited(int $retryAfter): void
     {
         http_response_code(429);
-        $this->sendPublicSpriteAccessHeaders();
+        $this->sendPublicFontAccessHeaders();
         header('Cache-Control: no-store');
         header('Content-Type: text/plain; charset=utf-8');
         header('Retry-After: ' . $retryAfter);
         echo 'Too many requests. Please try again later.';
-    }
-
-    private function isCrossSiteSubresourceRequest(Base $f3): bool
-    {
-        $fetchSite = strtolower((string)($_SERVER['HTTP_SEC_FETCH_SITE'] ?? ''));
-        if ($fetchSite !== '' && !in_array($fetchSite, ['same-origin', 'none'], true)) {
-            return true;
-        }
-
-        $origin = (string)($_SERVER['HTTP_ORIGIN'] ?? '');
-        if ($origin !== '' && !$this->sameConfiguredOrigin($f3, $origin)) {
-            return true;
-        }
-
-        $referer = (string)($_SERVER['HTTP_REFERER'] ?? '');
-
-        return $referer !== '' && !$this->sameConfiguredOrigin($f3, $referer);
-    }
-
-    private function sameConfiguredOrigin(Base $f3, string $url): bool
-    {
-        $config = $f3->get('CONFIG');
-        $baseUrl = (string)($config['app']['base_url'] ?? '');
-        $baseParts = parse_url($baseUrl);
-        $urlParts = parse_url($url);
-
-        if (!is_array($baseParts) || !is_array($urlParts)) {
-            return false;
-        }
-
-        $baseScheme = strtolower((string)($baseParts['scheme'] ?? ''));
-        $urlScheme = strtolower((string)($urlParts['scheme'] ?? ''));
-        $baseHost = strtolower((string)($baseParts['host'] ?? ''));
-        $urlHost = strtolower((string)($urlParts['host'] ?? ''));
-        $basePort = (int)($baseParts['port'] ?? ($baseScheme === 'https' ? 443 : 80));
-        $urlPort = (int)($urlParts['port'] ?? ($urlScheme === 'https' ? 443 : 80));
-
-        return $baseScheme === $urlScheme && $baseHost === $urlHost && $basePort === $urlPort;
     }
 
     private function clientIpAddress(): string

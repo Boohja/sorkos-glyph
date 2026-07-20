@@ -2,10 +2,12 @@
 /config/db.php
 /storage/cache/*
 /storage/logs/*
+/storage/fonts/*
 /tmp/*
 .impeccable
 /docs
 
 !/storage/cache/.gitkeep
 !/storage/logs/.gitkeep
+!/storage/fonts/.gitkeep
 !/tmp/.gitkeep

@@ -628,6 +628,92 @@ main {
   padding-bottom: 22px;
 }
 
+.editor-tabs {
+  min-width: 0;
+}
+
+.editor-tab-list {
+  display: flex;
+  gap: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.editor-tab {
+  min-width: 96px;
+  min-height: 44px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  padding: 10px 16px;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.editor-tab:hover:not(:disabled),
+.editor-tab:focus-visible {
+  color: var(--primary);
+}
+
+.editor-tab[aria-selected="true"] {
+  border-bottom-color: var(--primary);
+  color: var(--text);
+}
+
+.editor-tab:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.editor-tab-panel {
+  padding-top: 20px;
+}
+
+.editor-tab-panel[hidden] {
+  display: none;
+}
+
+.sprite-download-intro {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.sprite-download-intro p {
+  overflow: visible;
+  margin: 0;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.sprite-usage-example {
+  display: grid;
+  gap: 12px;
+  max-width: 780px;
+}
+
+.sprite-usage-example h3 {
+  margin-bottom: 4px;
+  font-size: 1rem;
+}
+
+.sprite-usage-example p {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.sprite-usage-example pre {
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--code-bg);
+  padding: 16px 76px 16px 16px;
+}
+
 .editor-shell .editor-panel-compact {
   border-bottom: 0;
   padding-bottom: 0;
@@ -646,7 +732,15 @@ main {
 }
 
 .metadata-form .form-grid {
-  grid-template-columns: minmax(180px, 1fr) minmax(160px, 0.85fr) minmax(120px, 0.55fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.metadata-form .form-grid > label {
+  align-self: start;
+}
+
+.metadata-form .form-grid > label input:not([type="checkbox"]) {
+  height: 42px;
 }
 
 .metadata-form .span-2 {
@@ -717,6 +811,32 @@ main {
   color: var(--muted);
   font-size: 0.92rem;
   font-weight: 700;
+}
+
+.form-grid label small {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.form-grid .checkbox-field {
+  display: flex;
+  min-height: 42px;
+  flex-direction: row;
+  align-items: center;
+  align-self: end;
+  gap: 9px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 10px;
+  color: var(--text);
+}
+
+.form-grid .checkbox-field input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--primary);
 }
 
 .form-grid input,
@@ -843,8 +963,22 @@ main {
 }
 
 .saved-icon-card .icon-preview {
+  width: 100%;
   min-height: 52px;
   padding: 6px;
+}
+
+.icon-preview-button {
+  appearance: none;
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 140ms ease-out, background-color 140ms ease-out;
+}
+
+.icon-preview-button:hover,
+.icon-preview-button:focus-visible {
+  border-color: var(--primary);
+  background: var(--primary-soft);
 }
 
 .saved-icon-form {
@@ -856,16 +990,21 @@ main {
   position: absolute;
   inset: 6px 6px auto auto;
   justify-content: flex-end;
-  gap: 4px;
 }
 
 .saved-icon-form label {
   gap: 0;
 }
 
+.saved-icon-form input {
+  font-weight: 500;
+}
+
 .icon-delete {
+  display: inline-grid;
   width: 28px;
   min-height: 28px;
+  place-items: center;
   border-radius: 6px;
   padding: 0;
   color: var(--muted);
@@ -945,6 +1084,128 @@ main {
   padding-left: 17px;
 }
 
+.icon-popover li {
+  position: relative;
+  padding-right: 24px;
+}
+
+.icon-popover li + li {
+  margin-top: 7px;
+}
+
+.message-dismiss {
+  position: absolute;
+  inset: -2px 0 auto auto;
+  display: inline-grid;
+  width: 20px;
+  min-height: 20px;
+  place-items: center;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.message-dismiss:hover,
+.message-dismiss:focus-visible {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.icon-source-dialog {
+  position: fixed;
+  z-index: 40;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: oklch(22% 0.03 276 / 0.48);
+  padding: 24px 16px;
+}
+
+.icon-source-dialog[hidden] {
+  display: none;
+}
+
+.icon-source-dialog-surface {
+  width: min(720px, calc(100% - 32px));
+  max-height: min(680px, calc(100dvh - 48px));
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+  padding: 16px;
+  color: var(--text);
+}
+
+.icon-source-dialog-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.icon-dialog-close {
+  width: 32px;
+  min-height: 32px;
+  padding: 0;
+  font-size: 1.15rem;
+}
+
+.icon-source-editor {
+  display: block;
+  width: 100%;
+  min-height: 280px;
+  max-height: min(540px, calc(100dvh - 150px));
+  overflow: auto;
+  resize: vertical;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin: 0;
+  background: var(--code-bg);
+  padding: 14px;
+  color: var(--text);
+  font: 0.86rem/1.55 ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  tab-size: 2;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.icon-source-editor:focus {
+  border-color: var(--primary);
+  outline: 2px solid color-mix(in oklab, var(--primary) 24%, transparent);
+  outline-offset: 1px;
+}
+
+.icon-source-dialog-footer {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.icon-source-dialog-actions {
+  display: flex;
+  flex: 0 0 auto;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.icon-source-status {
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.icon-source-status.is-error {
+  color: var(--danger);
+}
+
 .icon-grid-footer {
   display: flex;
   justify-content: flex-end;
@@ -952,34 +1213,142 @@ main {
   margin-top: 12px;
 }
 
-.cdn-link-panel {
+.editor-shell .font-panel {
   display: grid;
-  grid-template-columns: minmax(220px, 0.85fr) minmax(260px, 1.15fr) auto;
-  gap: 14px;
-  align-items: end;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  margin-top: 16px;
-  background: var(--panel);
-  padding: 14px;
+  gap: 16px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
 }
 
-.cdn-link-copy {
-  min-width: 0;
+.font-panel-heading,
+.font-ready-row,
+.font-error {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
 }
 
-.cdn-link-copy h3 {
-  margin-bottom: 4px;
-  font-size: 1rem;
-  line-height: 1.25;
-}
-
-.cdn-link-copy p {
-  margin-bottom: 0;
-  color: var(--muted);
-  font-size: 0.92rem;
-  line-height: 1.45;
+.font-panel .font-panel-heading p,
+.font-panel .font-meta,
+.font-panel .font-usage,
+.font-panel .font-empty p,
+.font-panel .font-error p {
+  overflow: visible;
+  margin: 0;
+  text-overflow: clip;
   white-space: normal;
+}
+
+.font-status {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--panel-muted);
+  padding: 4px 9px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.font-status-ready {
+  background: oklch(93% 0.05 151);
+  color: var(--success);
+}
+
+.font-status-failed {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.font-status-pending {
+  background: var(--primary-soft);
+  color: var(--primary-hover);
+}
+
+.font-ready-row {
+  align-items: center;
+}
+
+.font-cdn-control {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-block: 1px solid var(--border);
+  padding-block: 10px;
+}
+
+.font-cdn-control label {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--text);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.font-cdn-control input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--primary);
+}
+
+.font-cdn-control-status {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.font-cdn-control-status.is-error {
+  color: var(--danger);
+}
+
+.font-cdn-content {
+  display: grid;
+  gap: 12px;
+}
+
+.font-cdn-content[hidden] {
+  display: none;
+}
+
+.font-downloads {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.font-downloads .button small {
+  opacity: 0.78;
+  font-size: 0.75rem;
+}
+
+.font-meta {
+  font-size: 0.85rem;
+}
+
+.font-cdn-block {
+  display: grid;
+  gap: 12px;
+}
+
+.font-cdn-block > p {
+  overflow: visible;
+  margin: 0;
+  color: var(--muted);
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.font-cdn-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
 }
 
 .cdn-link-field {
@@ -998,6 +1367,45 @@ main {
   color: var(--text);
   font: inherit;
   padding: 9px 10px;
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  font-size: 0.86rem;
+}
+
+.font-usage {
+  font-size: 0.9rem;
+}
+
+.font-error {
+  border-radius: 8px;
+  background: var(--danger-soft);
+  padding: 13px;
+  color: var(--danger);
+}
+
+.font-error p {
+  color: var(--danger);
+  font-size: 0.9rem;
+}
+
+.font-problem-icons {
+  display: grid;
+  gap: 12px;
+}
+
+.font-error-list {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.font-error-list li + li {
+  margin-top: 5px;
+}
+
+.font-empty {
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
 }
 
 .message-page {
@@ -1450,9 +1858,44 @@ main {
     gap: 8px;
   }
 
-  .cdn-link-panel {
+  .font-panel-heading,
+  .font-ready-row,
+  .font-error {
+    flex-direction: column;
+  }
+
+  .font-cdn-row {
     grid-template-columns: 1fr;
     align-items: stretch;
+  }
+
+  .font-downloads,
+  .font-downloads .button,
+  .font-cdn-row .button {
+    width: 100%;
+  }
+
+  .icon-source-dialog-footer,
+  .icon-source-dialog-actions {
+    width: 100%;
+  }
+
+  .icon-source-dialog-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .editor-tab-list {
+    overflow-x: auto;
+  }
+
+  .editor-tab {
+    min-width: 92px;
+    flex: 1 0 auto;
+  }
+
+  .sprite-download-intro .button {
+    width: 100%;
   }
 
   .editor-heading .tool-actions .inline-form,

@@ -50,13 +50,13 @@ final class SpriteRepository
     /**
      * @return array<string, mixed>
      */
-    public function create(int $userId, string $name, string $slug, string $description = '', string $outputMode = 'pretty'): array
+    public function create(int $userId, string $name, string $slug, string $description = ''): array
     {
         $slug = $this->uniqueSlug($userId, $slug);
         $publicHash = $this->uniquePublicHash();
         $statement = $this->pdo->prepare(
-            'INSERT INTO glyph_sprites (user_id, public_hash, name, slug, description, output_mode)
-             VALUES (:user_id, :public_hash, :name, :slug, :description, :output_mode)'
+            'INSERT INTO glyph_sprites (user_id, public_hash, name, slug, description, font_cdn_enabled)
+             VALUES (:user_id, :public_hash, :name, :slug, :description, 0)'
         );
         $statement->execute([
             ':user_id' => $userId,
@@ -64,7 +64,6 @@ final class SpriteRepository
             ':name' => $name,
             ':slug' => $slug,
             ':description' => $description !== '' ? $description : null,
-            ':output_mode' => $outputMode === 'minified' ? 'minified' : 'pretty',
         ]);
 
         return $this->findForUser((int)$this->pdo->lastInsertId(), $userId);
@@ -98,25 +97,7 @@ final class SpriteRepository
         return $row ?: null;
     }
 
-    /**
-     * @return array<string, mixed>|null
-     */
-    public function findPublicByHash(string $publicHash): ?array
-    {
-        $statement = $this->pdo->prepare(
-            'SELECT * FROM glyph_sprites
-             WHERE public_hash = :public_hash
-               AND deleted_at IS NULL
-               AND cdn_enabled = 1
-               AND cdn_disabled_at IS NULL'
-        );
-        $statement->execute([':public_hash' => $publicHash]);
-        $row = $statement->fetch();
-
-        return $row ?: null;
-    }
-
-    public function update(int $spriteId, int $userId, string $name, string $slug, ?string $description, string $outputMode): void
+    public function update(int $spriteId, int $userId, string $name, string $slug, ?string $description): void
     {
         $slug = $this->uniqueSlug($userId, $slug, $spriteId);
         $statement = $this->pdo->prepare(
@@ -124,7 +105,6 @@ final class SpriteRepository
              SET name = :name,
                  slug = :slug,
                  description = :description,
-                 output_mode = :output_mode,
                  public_version = public_version + 1
              WHERE id = :id AND user_id = :user_id AND deleted_at IS NULL'
         );
@@ -134,8 +114,26 @@ final class SpriteRepository
             ':name' => $name,
             ':slug' => $slug,
             ':description' => $description !== '' ? $description : null,
-            ':output_mode' => $outputMode === 'minified' ? 'minified' : 'pretty',
         ]);
+    }
+
+    public function setFontCdnEnabled(int $spriteId, int $userId, bool $enabled): bool
+    {
+        $statement = $this->pdo->prepare(
+            'UPDATE glyph_sprites
+             SET font_cdn_enabled = :enabled,
+                 font_cdn_disabled_at = CASE WHEN :enabled_at = 1 THEN NULL ELSE CURRENT_TIMESTAMP END,
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = :id AND user_id = :user_id AND deleted_at IS NULL'
+        );
+        $statement->execute([
+            ':id' => $spriteId,
+            ':user_id' => $userId,
+            ':enabled' => $enabled ? 1 : 0,
+            ':enabled_at' => $enabled ? 1 : 0,
+        ]);
+
+        return $statement->rowCount() > 0;
     }
 
     public function touch(int $spriteId, int $userId): void

@@ -41,8 +41,8 @@ $f3->set('SETUP_WARNING', !is_file($appConfigPath) || !is_file($dbConfigPath));
 $f3->set('DEBUG', !empty($appConfig['app']['debug']) ? 3 : 0);
 
 $requestPath = (string)(parse_url((string)($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH) ?: '/');
-$isPublicCdnSpriteRequest = ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET'
-    && preg_match('#^/cdn/sprites/[A-Za-z0-9]{32,128}\.svg$#', $requestPath) === 1;
+$isPublicFontRequest = ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET'
+    && preg_match('#^/cdn/fonts/[A-Za-z0-9]{32,128}(?:\.css|/[a-f0-9]{64}\.(?:woff2?|woff))$#', $requestPath) === 1;
 
 $security = $appConfig['security'] ?? [];
 session_name((string)($security['session_name'] ?? 'glyph_session'));
@@ -55,7 +55,7 @@ session_set_cookie_params([
     'samesite' => (string)($security['session_samesite'] ?? 'Lax'),
 ]);
 
-if (!$isPublicCdnSpriteRequest && session_status() !== PHP_SESSION_ACTIVE) {
+if (!$isPublicFontRequest && session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
 
@@ -72,11 +72,19 @@ $f3->route('POST /sprites', 'App\Controllers\SpriteController->create');
 $f3->route('GET /sprites/@hash', 'App\Controllers\SpriteController->edit');
 $f3->route('POST /sprites/@hash', 'App\Controllers\SpriteController->update');
 $f3->route('POST /sprites/@hash/delete', 'App\Controllers\SpriteController->delete');
+$f3->route('POST /sprites/@hash/font/retry', 'App\Controllers\SpriteController->retryFont');
 $f3->route('POST /api/sanitize', 'App\Controllers\ApiController->sanitize');
 $f3->route('POST /api/build-sprite', 'App\Controllers\ApiController->buildSprite');
 $f3->route('POST /api/sprites/@hash/icons', 'App\Controllers\ApiController->addIcons');
 $f3->route('POST /api/sprites/@hash/icons/update', 'App\Controllers\ApiController->updateIcons');
+$f3->route('POST /api/sprites/@hash/font-cdn', 'App\Controllers\ApiController->updateFontCdn');
 $f3->route('POST /api/icons/@id', 'App\Controllers\ApiController->updateIcon');
+$f3->route('POST /api/icons/@id/source', 'App\Controllers\ApiController->replaceIconSource');
 $f3->route('POST /api/icons/@id/delete', 'App\Controllers\ApiController->deleteIcon');
+$f3->route('POST /api/icons/@id/messages/dismiss', 'App\Controllers\ApiController->dismissIconMessage');
+$f3->route('GET /api/icons/@id.svg', 'App\Controllers\ApiController->downloadIcon');
 $f3->route('GET /api/sprites/@hash.svg', 'App\Controllers\ApiController->downloadSavedSprite');
-$f3->route('GET /cdn/sprites/@hash.svg', 'App\Controllers\ApiController->cdnSprite');
+$f3->route('GET /api/sprites/@hash/font.css', 'App\Controllers\ApiController->downloadFontCss');
+$f3->route('GET /api/sprites/@hash/font.@extension', 'App\Controllers\ApiController->downloadFont');
+$f3->route('GET /cdn/fonts/@hash.css', 'App\Controllers\ApiController->cdnFontCss');
+$f3->route('GET /cdn/fonts/@hash/@artifact.@extension', 'App\Controllers\ApiController->cdnFont');

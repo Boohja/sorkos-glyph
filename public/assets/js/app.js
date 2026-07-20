@@ -575,9 +575,43 @@
   var statusLine = editor.querySelector('[data-saved-status]');
   var saveIconButtons = editor.querySelectorAll('[data-save-icon-changes]');
   var downloadSprite = editor.querySelector('[data-download-sprite]');
-  var copySprite = editor.querySelector('[data-copy-saved-sprite]');
-  var copyCdnUrl = editor.querySelector('[data-copy-cdn-url]');
-  var cdnUrlInput = editor.querySelector('[data-cdn-url-input]');
+  var editorTabs = editor.querySelectorAll('[data-editor-tab]');
+  var fontCdnToggle = editor.querySelector('[data-font-cdn-toggle]');
+  var fontCdnContent = editor.querySelector('[data-font-cdn-content]');
+  var fontCdnStatus = editor.querySelector('[data-font-cdn-status]');
+
+  editorTabs.forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      activateEditorTab(tab);
+    });
+
+    tab.addEventListener('keydown', function (event) {
+      var enabledTabs = Array.prototype.filter.call(editorTabs, function (candidate) {
+        return !candidate.disabled;
+      });
+      var currentIndex = enabledTabs.indexOf(tab);
+      var nextIndex = currentIndex;
+
+      if (event.key === 'ArrowRight') {
+        nextIndex = (currentIndex + 1) % enabledTabs.length;
+      } else if (event.key === 'ArrowLeft') {
+        nextIndex = (currentIndex - 1 + enabledTabs.length) % enabledTabs.length;
+      } else if (event.key === 'Home') {
+        nextIndex = 0;
+      } else if (event.key === 'End') {
+        nextIndex = enabledTabs.length - 1;
+      } else {
+        return;
+      }
+
+      event.preventDefault();
+      activateEditorTab(enabledTabs[nextIndex]);
+      enabledTabs[nextIndex].focus();
+    });
+  });
+
+  activateTabFromHash();
+  window.addEventListener('hashchange', activateTabFromHash);
 
   if (dropzone && fileInput) {
     dropzone.addEventListener('dragover', function (event) {
@@ -609,10 +643,7 @@
     if (symbolInput) {
       symbolInput.setAttribute('data-original-value', symbolInput.value);
       symbolInput.addEventListener('input', function () {
-        var isDirty = symbolInput.value !== symbolInput.getAttribute('data-original-value');
-        form.classList.toggle('is-dirty', isDirty);
-        setCardDirty(form, isDirty);
-        setRowStatus(rowStatus, isDirty ? 'Unsaved' : '');
+        syncIconForms(form.getAttribute('data-icon-form'), symbolInput.value);
         updateSaveIconButtons();
       });
     }
@@ -641,43 +672,46 @@
     });
   }
 
-  if (copySprite && downloadSprite) {
-    copySprite.addEventListener('click', function () {
-      if (dirtyIconCount() > 0) {
-        var firstDirty = editor.querySelector('[data-icon-form].is-dirty input[name="symbol_id"]');
-        if (firstDirty) {
-          firstDirty.focus();
-        }
-        return;
-      }
+  editor.querySelectorAll('[data-copy-target]').forEach(function (button) {
+    var target = editor.querySelector('[data-copy-value="' + button.getAttribute('data-copy-target') + '"]');
+    if (!target) {
+      return;
+    }
 
-      copySprite.disabled = true;
+    button.addEventListener('click', function () {
+      copyText(target.value, target, button);
+    });
+  });
 
-      fetch(downloadSprite.href, {
-        credentials: 'same-origin'
-      }).then(function (response) {
-        if (!response.ok) {
-          throw new Error('Could not copy sprite. Try downloading instead.');
-        }
-        return response.text();
-      }).then(function (sprite) {
-        return navigator.clipboard.writeText(sprite);
-      }).then(function () {
-        flashSavedButton(copySprite, 'Copied');
-      }).catch(function (error) {
-        copySprite.title = error.message || 'Could not copy sprite. Try downloading instead.';
-      }).finally(function () {
-        copySprite.disabled = false;
-      });
+  var copySpriteSnippet = editor.querySelector('[data-copy-sprite-snippet]');
+  var spriteSnippet = editor.querySelector('[data-sprite-snippet]');
+  if (copySpriteSnippet && spriteSnippet) {
+    copySpriteSnippet.addEventListener('click', function () {
+      copyText(spriteSnippet.textContent, null, copySpriteSnippet);
     });
   }
 
-  if (copyCdnUrl && cdnUrlInput) {
-    copyCdnUrl.addEventListener('click', function () {
-      navigator.clipboard.writeText(cdnUrlInput.value).then(function () {
-        flashSavedButton(copyCdnUrl, 'Copied');
-      }).catch(function () {
-        cdnUrlInput.select();
+  if (fontCdnToggle) {
+    fontCdnToggle.addEventListener('change', function () {
+      var enabled = fontCdnToggle.checked;
+      var formData = new FormData();
+      formData.append('csrf_token', csrfToken);
+      formData.append('enabled', enabled ? '1' : '0');
+
+      fontCdnToggle.disabled = true;
+      setFontCdnStatus('Saving...');
+      postForm('/api/sprites/' + spriteRef + '/font-cdn', formData).then(function (data) {
+        var savedEnabled = data.enabled === true;
+        fontCdnToggle.checked = savedEnabled;
+        if (fontCdnContent) {
+          fontCdnContent.hidden = !savedEnabled;
+        }
+        setFontCdnStatus('Saved');
+      }).catch(function (error) {
+        fontCdnToggle.checked = !enabled;
+        setFontCdnStatus(error.message || 'Could not update CDN access.', true);
+      }).finally(function () {
+        fontCdnToggle.disabled = false;
       });
     });
   }
@@ -706,6 +740,124 @@
 
   document.addEventListener('click', closeIconPopovers);
 
+  editor.querySelectorAll('[data-dismiss-icon-message]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      var formData = new FormData();
+      formData.append('csrf_token', csrfToken);
+      formData.append('message', button.getAttribute('data-message') || '');
+      button.disabled = true;
+
+      postForm('/api/icons/' + button.getAttribute('data-dismiss-icon-message') + '/messages/dismiss', formData).then(function () {
+        var item = button.closest('[data-icon-message-item]');
+        var popover = button.closest('[data-details-popover]');
+        var card = button.closest('[data-icon-row]');
+        var badge = card ? card.querySelector('[data-details-toggle]') : null;
+        if (item) {
+          item.remove();
+        }
+        var remaining = popover ? popover.querySelectorAll('[data-icon-message-item]').length : 0;
+        if (badge && remaining > 0) {
+          badge.textContent = String(remaining);
+          badge.setAttribute('aria-label', remaining + ' cleanup ' + (remaining === 1 ? 'detail' : 'details'));
+        } else {
+          if (popover) {
+            popover.remove();
+          }
+          if (badge) {
+            badge.remove();
+          }
+        }
+      }).catch(function (error) {
+        button.disabled = false;
+        button.title = error.message || 'Could not dismiss this message.';
+      });
+    });
+  });
+
+  editor.querySelectorAll('[data-show-icon-source]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      var card = button.closest('[data-icon-row]');
+      var dialog = card ? card.querySelector('[data-icon-source-dialog]') : null;
+      if (dialog) {
+        dialog._glyphTrigger = button;
+        dialog.hidden = false;
+        var sourceEditor = dialog.querySelector('[data-icon-source-editor]');
+        if (sourceEditor) {
+          sourceEditor.focus();
+        }
+      }
+    });
+  });
+
+  editor.querySelectorAll('[data-icon-source-editor]').forEach(function (sourceEditor) {
+    var dialog = sourceEditor.closest('[data-icon-source-dialog]');
+    var saveButton = dialog ? dialog.querySelector('[data-save-icon-source]') : null;
+    var status = dialog ? dialog.querySelector('[data-icon-source-status]') : null;
+    sourceEditor.setAttribute('data-original-source', sourceEditor.value);
+
+    sourceEditor.addEventListener('input', function () {
+      var isDirty = sourceEditor.value !== sourceEditor.getAttribute('data-original-source');
+      if (saveButton) {
+        saveButton.hidden = !isDirty;
+      }
+      if (status) {
+        status.textContent = '';
+        status.classList.remove('is-error');
+      }
+    });
+  });
+
+  editor.querySelectorAll('[data-save-icon-source]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      var dialog = button.closest('[data-icon-source-dialog]');
+      var sourceEditor = dialog ? dialog.querySelector('[data-icon-source-editor]') : null;
+      var status = dialog ? dialog.querySelector('[data-icon-source-status]') : null;
+      if (!sourceEditor) {
+        return;
+      }
+
+      var formData = new FormData();
+      formData.append('csrf_token', csrfToken);
+      formData.append('svg_source', sourceEditor.value);
+      button.disabled = true;
+      sourceEditor.disabled = true;
+      setIconSourceStatus(status, 'Saving...');
+
+      postForm('/api/icons/' + button.getAttribute('data-save-icon-source') + '/source', formData).then(function () {
+        closeIconSourceDialog(dialog);
+        window.location.reload();
+      }).catch(function (error) {
+        setIconSourceStatus(status, error.message || 'Could not replace this SVG.', true);
+        button.disabled = false;
+        sourceEditor.disabled = false;
+        sourceEditor.focus();
+      });
+    });
+  });
+
+  editor.querySelectorAll('[data-close-icon-source]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      var dialog = button.closest('[data-icon-source-dialog]');
+      if (dialog) {
+        closeIconSourceDialog(dialog);
+      }
+    });
+  });
+
+  editor.querySelectorAll('[data-icon-source-dialog]').forEach(function (dialog) {
+    dialog.addEventListener('click', function (event) {
+      if (event.target === dialog) {
+        closeIconSourceDialog(dialog);
+      }
+    });
+    dialog.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeIconSourceDialog(dialog);
+      }
+    });
+  });
+
   editor.querySelectorAll('[data-delete-icon]').forEach(function (button) {
     button.addEventListener('click', function () {
       if (!window.confirm('Delete this icon?')) {
@@ -719,10 +871,7 @@
       button.disabled = true;
       setRowStatus(rowStatus, 'Deleting...');
       postForm('/api/icons/' + button.getAttribute('data-delete-icon') + '/delete', formData).then(function () {
-        if (row) {
-          row.remove();
-        }
-        updateSaveIconButtons();
+        window.location.reload();
       }).catch(function (error) {
         var message = error.message || 'Could not delete icon.';
         setRowStatus(rowStatus, message, true);
@@ -775,7 +924,8 @@
   }
 
   function saveIconChanges() {
-    var dirtyForms = Array.prototype.slice.call(editor.querySelectorAll('[data-icon-form].is-dirty'));
+    var allDirtyForms = Array.prototype.slice.call(editor.querySelectorAll('[data-icon-form].is-dirty'));
+    var dirtyForms = uniqueIconForms(allDirtyForms);
     if (!dirtyForms.length) {
       return;
     }
@@ -803,7 +953,7 @@
     formData.append('csrf_token', csrfToken);
     formData.append('icons', JSON.stringify(icons));
 
-    dirtyForms.forEach(function (form) {
+    allDirtyForms.forEach(function (form) {
       form.classList.add('is-saving');
       setRowStatus(form.querySelector('[data-row-status]'), 'Saving...');
       setButtons(form.querySelectorAll('button'), true);
@@ -812,25 +962,27 @@
 
     postForm('/api/sprites/' + spriteRef + '/icons/update', formData).then(function (data) {
       (data.icons || []).forEach(function (icon) {
-        var form = editor.querySelector('[data-icon-form="' + icon.id + '"]');
-        var input = form ? form.querySelector('input[name="symbol_id"]') : null;
-        if (!form || !input) {
-          return;
-        }
+        editor.querySelectorAll('[data-icon-form="' + icon.id + '"]').forEach(function (form) {
+          var input = form.querySelector('input[name="symbol_id"]');
+          if (!input) {
+            return;
+          }
 
-        input.value = icon.symbol_id;
-        input.setAttribute('data-original-value', icon.symbol_id);
-        form.classList.remove('is-dirty');
-        setCardDirty(form, false);
-        setRowStatus(form.querySelector('[data-row-status]'), 'Saved');
+          input.value = icon.symbol_id;
+          input.setAttribute('data-original-value', icon.symbol_id);
+          form.classList.remove('is-dirty');
+          setCardDirty(form, false);
+          setRowStatus(form.querySelector('[data-row-status]'), 'Saved');
+        });
       });
+      window.location.reload();
     }).catch(function (error) {
       var message = error.message || 'Could not save icon changes.';
-      dirtyForms.forEach(function (form) {
+      allDirtyForms.forEach(function (form) {
         setRowStatus(form.querySelector('[data-row-status]'), message, true);
       });
     }).finally(function () {
-      dirtyForms.forEach(function (form) {
+      allDirtyForms.forEach(function (form) {
         form.classList.remove('is-saving');
         setButtons(form.querySelectorAll('button'), false);
       });
@@ -849,8 +1001,79 @@
     });
   }
 
+  function activateEditorTab(tab, updateHash) {
+    if (!tab || tab.disabled) {
+      return;
+    }
+
+    editorTabs.forEach(function (candidate) {
+      var isActive = candidate === tab;
+      candidate.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      candidate.tabIndex = isActive ? 0 : -1;
+    });
+    editor.querySelectorAll('[data-editor-tabpanel]').forEach(function (panel) {
+      panel.hidden = panel.id !== tab.getAttribute('aria-controls');
+    });
+    if (updateHash !== false && window.history && typeof window.history.replaceState === 'function') {
+      window.history.replaceState(null, '', '#' + tab.getAttribute('aria-controls').replace('-panel', ''));
+    }
+  }
+
+  function activateTabFromHash() {
+    var hash = window.location.hash.replace('#', '');
+    if (!hash) {
+      return;
+    }
+    var tab = editor.querySelector('[data-editor-tab="' + hash + '-panel"]');
+    if (tab && !tab.disabled) {
+      activateEditorTab(tab, false);
+    }
+  }
+
+  function closeIconSourceDialog(dialog) {
+    dialog.hidden = true;
+    if (dialog._glyphTrigger) {
+      dialog._glyphTrigger.focus();
+    }
+  }
+
+  function copyText(value, fallbackInput, button) {
+    navigator.clipboard.writeText(value).then(function () {
+      flashSavedButton(button, 'Copied');
+    }).catch(function () {
+      if (fallbackInput && typeof fallbackInput.select === 'function') {
+        fallbackInput.select();
+      }
+    });
+  }
+
   function dirtyIconCount() {
-    return editor.querySelectorAll('[data-icon-form].is-dirty').length;
+    return uniqueIconForms(Array.prototype.slice.call(editor.querySelectorAll('[data-icon-form].is-dirty'))).length;
+  }
+
+  function uniqueIconForms(forms) {
+    var formsByIcon = {};
+    forms.forEach(function (form) {
+      formsByIcon[form.getAttribute('data-icon-form')] = form;
+    });
+    return Object.keys(formsByIcon).map(function (iconId) {
+      return formsByIcon[iconId];
+    });
+  }
+
+  function syncIconForms(iconId, value) {
+    editor.querySelectorAll('[data-icon-form="' + iconId + '"]').forEach(function (form) {
+      var input = form.querySelector('input[name="symbol_id"]');
+      if (!input) {
+        return;
+      }
+
+      input.value = value;
+      var isDirty = value !== input.getAttribute('data-original-value');
+      form.classList.toggle('is-dirty', isDirty);
+      setCardDirty(form, isDirty);
+      setRowStatus(form.querySelector('[data-row-status]'), isDirty ? 'Unsaved' : '');
+    });
   }
 
   function setCardDirty(form, isDirty) {
@@ -878,6 +1101,21 @@
     statusLine.classList.toggle('is-error', Boolean(isError));
   }
 
+  function setFontCdnStatus(message, isError) {
+    if (!fontCdnStatus) {
+      return;
+    }
+
+    fontCdnStatus.textContent = message || '';
+    fontCdnStatus.classList.toggle('is-error', Boolean(isError));
+    window.clearTimeout(fontCdnStatus._glyphStatusTimer);
+    if (message === 'Saved' && !isError) {
+      fontCdnStatus._glyphStatusTimer = window.setTimeout(function () {
+        fontCdnStatus.textContent = '';
+      }, 2200);
+    }
+  }
+
   function setRowStatus(element, message, isError) {
     if (!element) {
       return;
@@ -894,6 +1132,14 @@
         }
       }, 2500);
     }
+  }
+
+  function setIconSourceStatus(element, message, isError) {
+    if (!element) {
+      return;
+    }
+    element.textContent = message || '';
+    element.classList.toggle('is-error', Boolean(isError));
   }
 
   function setButtons(buttons, disabled) {

@@ -32,6 +32,12 @@ return [
         'per_sprite_window_seconds' => 86400,
     ],
 
+    'font_generator' => [
+        'python_binary' => 'python',
+        'script_path' => dirname(__DIR__) . '/bin/build_icon_font.py',
+        'storage_path' => dirname(__DIR__) . '/storage/fonts',
+    ],
+
     'auth' => [
         'base_url' => 'https://auth.test',
         'client_id' => 'glyph-local-client-id',

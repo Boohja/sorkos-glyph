@@ -4,9 +4,7 @@
       <h1>{{ @sprite.name }}</h1>
     </div>
     <div class="tool-actions">
-      <a class="button button-primary" href="/api/sprites/{{ @sprite.public_hash }}.svg" data-download-sprite>Download</a>
-      <button class="button button-secondary" type="button" data-copy-saved-sprite data-copy-label="Copy">Copy</button>
-      <form class="inline-form" method="post" action="/sprites/{{ @sprite.public_hash }}/delete" onsubmit="return confirm('Delete this sprite? This cannot be undone.');">
+      <form class="inline-form" method="post" action="/sprites/{{ @sprite.public_hash }}/delete" onsubmit="return confirm('Delete this collection? This cannot be undone.');">
         <input type="hidden" name="csrf_token" value="{{ @csrfToken }}">
         <button class="button button-secondary" type="submit">Delete</button>
       </form>
@@ -33,15 +31,9 @@
             <input name="name" value="{{ @sprite.name }}" required maxlength="120">
           </label>
           <label>
-            <span>File name</span>
-            <input name="slug" value="{{ @sprite.slug }}" maxlength="140">
-          </label>
-          <label>
-            <span>Format</span>
-            <select name="output_mode">
-              <option value="pretty" <check if="{{ @sprite.output_mode=='pretty' }}">selected</check>>Pretty</option>
-              <option value="minified" <check if="{{ @sprite.output_mode=='minified' }}">selected</check>>Minified</option>
-            </select>
+            <span>CSS prefix</span>
+            <input name="slug" value="{{ @sprite.slug }}" maxlength="140" aria-describedby="prefix-help">
+            <small id="prefix-help">Prefix for icon font classes.</small>
           </label>
           <label class="span-2">
             <span>Description</span>
@@ -53,48 +45,166 @@
     </section>
   </div>
 
-  <section class="editor-panel icons-panel">
-    <div class="tool-header">
-      <div>
-        <h2>Icons</h2>
-        <p>{{ count(@icons) }} icons</p>
-      </div>
-      <button class="button button-primary button-small save-icon-changes" type="button" data-save-icon-changes hidden>
-        Save ID changes
-      </button>
+  <section class="editor-tabs" data-editor-tabs>
+    <div class="editor-tab-list" role="tablist" aria-label="Sprite contents">
+      <button class="editor-tab" id="icons-tab" type="button" role="tab" aria-selected="true" aria-controls="icons-panel" tabindex="0" data-editor-tab="icons-panel">Icons</button>
+      <button class="editor-tab" id="sprite-tab" type="button" role="tab" aria-selected="false" aria-controls="sprite-panel" tabindex="-1" data-editor-tab="sprite-panel" <check if="{{ !count(@icons) }}">disabled aria-disabled="true"</check>>Sprite</button>
+      <button class="editor-tab" id="font-tab" type="button" role="tab" aria-selected="false" aria-controls="font-panel" tabindex="-1" data-editor-tab="font-panel" <check if="{{ !count(@icons) }}">disabled aria-disabled="true"</check>>Font</button>
     </div>
 
-    <check if="{{ count(@icons) }}">
+    <div class="editor-tab-panel icons-panel" id="icons-panel" role="tabpanel" aria-labelledby="icons-tab" tabindex="0" data-editor-tabpanel>
+      <div class="tool-header">
+        <p>{{ count(@icons) }} icons</p>
+        <button class="button button-primary button-small save-icon-changes" type="button" data-save-icon-changes hidden>
+          Save ID changes
+        </button>
+      </div>
+
+      <check if="{{ count(@icons) }}">
+        <true>
+          <div class="saved-icon-grid">
+            <repeat group="{{ @icons }}" value="{{ @icon }}">
+              <include href="partials/icon-card.html" />
+            </repeat>
+          </div>
+          <div class="icon-grid-footer">
+            <button class="button button-primary button-small save-icon-changes" type="button" data-save-icon-changes hidden>
+              Save ID changes
+            </button>
+          </div>
+        </true>
+        <false>
+          <div class="empty-state">
+            <p>No icons yet</p>
+          </div>
+        </false>
+      </check>
+    </div>
+
+    <div class="editor-tab-panel sprite-panel" id="sprite-panel" role="tabpanel" aria-labelledby="sprite-tab" tabindex="0" data-editor-tabpanel hidden>
+      <div class="sprite-download-intro">
+        <p>Download the sprite and reference its symbols from your markup.</p>
+        <a class="button button-primary" href="/api/sprites/{{ @sprite.public_hash }}.svg" data-download-sprite>Download SVG sprite</a>
+      </div>
+      <div class="sprite-usage-example">
+        <div>
+          <h3>Usage example</h3>
+          <p>Place <code>{{ @sprite.slug }}.svg</code> with your assets, then reference an icon ID.</p>
+        </div>
+        <div class="code-preview-box">
+          <button class="copy-inline" type="button" data-copy-sprite-snippet data-copy-label="Copy">Copy</button>
+          <pre><code data-sprite-snippet>&lt;svg class="icon" aria-hidden="true"&gt;
+  &lt;use href="/assets/{{ @sprite.slug }}.svg#{{ @exampleSymbolId }}"&gt;&lt;/use&gt;
+&lt;/svg&gt;</code></pre>
+        </div>
+      </div>
+    </div>
+
+    <div class="editor-tab-panel" id="font-panel" role="tabpanel" aria-labelledby="font-tab" tabindex="0" data-editor-tabpanel hidden>
+      <section class="font-panel" aria-label="Font files">
+        <div class="font-panel-heading">
+          <p>Generate an icon font from this collection for use in CSS, with downloadable font files and optional development CDN links.</p>
+          <span class="font-status font-status-{{ @font.status }}">{{ ucfirst(@font.status) }}</span>
+        </div>
+
+    <check if="{{ @font.status == 'ready' }}">
       <true>
-        <div class="saved-icon-grid">
-          <repeat group="{{ @icons }}" value="{{ @icon }}">
-            <include href="partials/icon-card.html" />
-          </repeat>
+        <div class="font-ready-row">
+          <div class="font-downloads">
+            <a class="button button-primary" href="/api/sprites/{{ @sprite.public_hash }}/font.woff2">Download WOFF2 <small>{{ @font.woff2_size_label }}</small></a>
+            <a class="button button-secondary" href="/api/sprites/{{ @sprite.public_hash }}/font.woff">WOFF <small>{{ @font.woff_size_label }}</small></a>
+            <a class="button button-secondary" href="/api/sprites/{{ @sprite.public_hash }}/font.css">CSS</a>
+          </div>
+          <p class="font-meta">Generated {{ @font.generated_at }} · prefix <code>{{ @sprite.slug }}-</code></p>
         </div>
-        <div class="icon-grid-footer">
-          <button class="button button-primary button-small save-icon-changes" type="button" data-save-icon-changes hidden>
-            Save ID changes
-          </button>
-        </div>
-        <check if="{{ count(@icons) > 1 }}">
-          <section class="cdn-link-panel" aria-labelledby="cdn-link-title">
-            <div class="cdn-link-copy">
-              <h3 id="cdn-link-title">Development CDN link</h3>
-              <p>Public sprite links are intended for development and testing. They are rate-limited and may be disabled for production hotlinking.</p>
-            </div>
-            <label class="cdn-link-field">
-              <span>Sprite URL</span>
-              <input value="{{ @cdnUrl }}" readonly data-cdn-url-input>
+          <div class="font-cdn-control">
+            <label>
+              <input type="checkbox" data-font-cdn-toggle <check if="{{ @sprite.font_cdn_enabled }}">checked</check>>
+              <span>Enable public font CDN for development</span>
             </label>
-            <button class="button button-secondary button-small" type="button" data-copy-cdn-url data-copy-label="Copy URL">Copy URL</button>
-          </section>
-        </check>
+            <span class="font-cdn-control-status" data-font-cdn-status aria-live="polite"></span>
+          </div>
+          <div class="font-cdn-content" data-font-cdn-content <check if="{{ !@sprite.font_cdn_enabled }}">hidden</check>>
+            <div class="font-cdn-block">
+            <p>The stylesheet loads the WOFF2 file from the CDN automatically. Use the direct font URLs when you need to write your own <code>@font-face</code> rule.</p>
+            <div class="font-cdn-row">
+              <label class="cdn-link-field">
+                <span>Public stylesheet URL</span>
+                <input value="{{ @fontCdnUrl }}" readonly data-copy-value="font-css">
+              </label>
+              <button class="button button-secondary button-small" type="button" data-copy-target="font-css" data-copy-label="Copy URL">Copy URL</button>
+            </div>
+            <div class="font-cdn-row">
+              <label class="cdn-link-field">
+                <span>Direct WOFF2 URL</span>
+                <input value="{{ @fontWoff2CdnUrl }}" readonly data-copy-value="font-woff2">
+              </label>
+              <button class="button button-secondary button-small" type="button" data-copy-target="font-woff2" data-copy-label="Copy URL">Copy URL</button>
+            </div>
+            <div class="font-cdn-row">
+              <label class="cdn-link-field">
+                <span>Direct WOFF URL</span>
+                <input value="{{ @fontWoffCdnUrl }}" readonly data-copy-value="font-woff">
+              </label>
+              <button class="button button-secondary button-small" type="button" data-copy-target="font-woff" data-copy-label="Copy URL">Copy URL</button>
+            </div>
+            </div>
+            <p class="font-usage">Add the stylesheet, then use <code>&lt;i class=&quot;{{ @exampleClass }}&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;</code>.</p>
+          </div>
       </true>
       <false>
-        <div class="empty-state">
-          <p>No icons yet</p>
-        </div>
+        <check if="{{ @font.status == 'failed' }}">
+          <true>
+            <div class="font-error" role="status">
+              <div>
+                <strong>{{ @font.error.message }}</strong>
+                <p>The SVG icons remain saved. Fix the listed outlines and retry generation.</p>
+              </div>
+              <form method="post" action="/sprites/{{ @sprite.public_hash }}/font/retry#font">
+                <input type="hidden" name="csrf_token" value="{{ @csrfToken }}">
+                <button class="button button-secondary button-small" type="submit">Retry</button>
+              </form>
+            </div>
+            <check if="{{ count(@fontProblemIcons) }}">
+              <div class="font-problem-icons">
+                <ul class="font-error-list">
+                  <repeat group="{{ @font.error.icons }}" value="{{ @fontErrorIcon }}">
+                    <li><code>{{ @fontErrorIcon.symbol_id }}</code>: {{ implode(' ', @fontErrorIcon.issues) }}</li>
+                  </repeat>
+                </ul>
+                <div class="saved-icon-grid">
+                  <repeat group="{{ @fontProblemIcons }}" value="{{ @icon }}">
+                    <include href="partials/icon-card.html" />
+                  </repeat>
+                </div>
+                <div class="icon-grid-footer">
+                  <button class="button button-primary button-small save-icon-changes" type="button" data-save-icon-changes hidden>
+                    Save ID changes
+                  </button>
+                </div>
+              </div>
+            </check>
+          </true>
+          <false>
+            <check if="{{ @font.status == 'pending' }}">
+              <true>
+                <div class="font-empty" aria-live="polite">
+                  <strong>Font generation is in progress</strong>
+                  <p>Refresh this page in a moment to see the latest result.</p>
+                </div>
+              </true>
+              <false>
+                <div class="font-empty">
+                  <strong>No font generated yet</strong>
+                  <p>Add at least one path-based SVG icon to build WOFF2, WOFF, and CSS files.</p>
+                </div>
+              </false>
+            </check>
+          </false>
+        </check>
       </false>
     </check>
+      </section>
+    </div>
   </section>
 </section>

@@ -27,7 +27,7 @@ final class DashboardController
         $pdo = Database::connection($f3->get('DB_CONFIG'));
         $sprites = (new SpriteRepository($pdo))->listForUser((int)$currentUser['id']);
         $config = $f3->get('CONFIG');
-        $f3->set('title', 'Sprites');
+        $f3->set('title', 'Collections');
         $f3->set('appName', $config['app']['name'] ?? 'Glyph');
         $f3->set('currentUser', $currentUser);
         $f3->set('sprites', $sprites);

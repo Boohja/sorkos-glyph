@@ -1,7 +1,13 @@
 <article class="saved-icon-card" data-icon-row="{{ @icon.id }}">
-  <div class="icon-preview" aria-hidden="true">
-    <svg viewBox="{{ @icon.view_box }}">{{ @icon.symbol_markup | raw }}</svg>
-  </div>
+  <button
+    class="icon-preview icon-preview-button"
+    type="button"
+    data-show-icon-source
+    aria-label="Show SVG source for {{ @icon.symbol_id }}"
+    title="View SVG source"
+  >
+    <svg viewBox="{{ @icon.view_box }}" aria-hidden="true">{{ @icon.symbol_markup | raw }}</svg>
+  </button>
   <check if="{{ count(@icon.messages) }}">
     <button
       class="detail-badge {{ count(@icon.warnings) ? 'has-warnings' : '' }}"
@@ -14,7 +20,17 @@
       <strong>{{ count(@icon.warnings) ? 'Warnings' : 'Details' }}</strong>
       <ul>
         <repeat group="{{ @icon.messages }}" value="{{ @message }}">
-          <li>{{ @message }}</li>
+          <li data-icon-message-item>
+            <span>{{ @message }}</span>
+            <button
+              class="message-dismiss"
+              type="button"
+              data-dismiss-icon-message="{{ @icon.id }}"
+              data-message="{{ @message }}"
+              aria-label="Dismiss: {{ @message }}"
+              title="Dismiss permanently"
+            >&times;</button>
+          </li>
         </repeat>
       </ul>
     </div>
@@ -30,4 +46,25 @@
     </div>
     <span class="row-status" data-row-status aria-live="polite"></span>
   </form>
+  <div class="icon-source-dialog" role="dialog" aria-modal="true" aria-label="SVG source for {{ @icon.symbol_id }}" data-icon-source-dialog hidden>
+    <div class="icon-source-dialog-surface">
+      <div class="icon-source-dialog-heading">
+        <strong>{{ @icon.symbol_id }}.svg</strong>
+        <button class="button button-plain icon-dialog-close" type="button" data-close-icon-source aria-label="Close SVG source">&times;</button>
+      </div>
+      <textarea
+        class="icon-source-editor"
+        data-icon-source-editor
+        aria-label="SVG source for {{ @icon.symbol_id }}"
+        spellcheck="false"
+      >{{ @icon.svg_source_escaped | raw }}</textarea>
+      <div class="icon-source-dialog-footer">
+        <span class="icon-source-status" data-icon-source-status role="status" aria-live="polite"></span>
+        <div class="icon-source-dialog-actions">
+          <a class="button button-secondary" href="/api/icons/{{ @icon.id }}.svg" download>Download</a>
+          <button class="button button-primary" type="button" data-save-icon-source="{{ @icon.id }}" hidden>Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </article>
