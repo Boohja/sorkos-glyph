@@ -428,7 +428,8 @@ final class ApiController
             return;
         }
         $icons = $this->icons($f3)->listForSprite((int)$sprite['id'], (int)$currentUser['id']);
-        $css = (new IconFontCssBuilder())->build($sprite, $icons, './' . (string)$sprite['slug'] . '.woff2');
+        $fontBaseUrl = './' . (string)$sprite['slug'];
+        $css = (new IconFontCssBuilder())->build($sprite, $icons, $fontBaseUrl . '.woff2', $fontBaseUrl . '.woff');
         header('Cache-Control: private, no-store');
         header('Content-Type: text/css; charset=utf-8');
         header('Content-Disposition: attachment; filename="' . (string)$sprite['slug'] . '.css"');
@@ -444,7 +445,7 @@ final class ApiController
             echo 'Font not found.';
             return;
         }
-        $etag = '"' . hash('sha256', 'font-css-v1:' . $artifact['slug'] . ':' . $artifact['woff2_hash']) . '"';
+        $etag = '"' . hash('sha256', 'font-css-v3:' . $artifact['slug'] . ':' . $artifact['woff2_hash'] . ':' . $artifact['woff_hash']) . '"';
         $this->sendPublicFontAccessHeaders();
         header('Content-Type: text/css; charset=utf-8');
         header('Cache-Control: public, max-age=300, stale-while-revalidate=86400');
@@ -459,8 +460,10 @@ final class ApiController
             return;
         }
         $icons = $this->icons($f3)->listForSprite((int)$artifact['sprite_id'], (int)$artifact['user_id']);
-        $fontUrl = '/cdn/fonts/' . $publicHash . '/' . $artifact['woff2_hash'] . '.woff2';
-        echo (new IconFontCssBuilder())->build($artifact, $icons, $fontUrl);
+        $fontBaseUrl = '/cdn/fonts/' . $publicHash . '/';
+        $woff2Url = $fontBaseUrl . $artifact['woff2_hash'] . '.woff2';
+        $woffUrl = $fontBaseUrl . $artifact['woff_hash'] . '.woff';
+        echo (new IconFontCssBuilder())->build($artifact, $icons, $woff2Url, $woffUrl);
     }
 
     public function cdnFont(Base $f3): void

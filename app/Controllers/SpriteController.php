@@ -72,9 +72,8 @@ final class SpriteController
         $f3->set('font', $preparedFont);
         $f3->set('fontProblemIcons', $this->fontProblemIcons($icons, $preparedFont));
         $f3->set('fontCdnUrl', $this->absoluteUrl($config, '/cdn/fonts/' . $sprite['public_hash'] . '.css'));
-        $f3->set('fontWoff2CdnUrl', $this->fontAssetCdnUrl($config, $sprite, $preparedFont, 'woff2'));
-        $f3->set('fontWoffCdnUrl', $this->fontAssetCdnUrl($config, $sprite, $preparedFont, 'woff'));
         $f3->set('exampleSymbolId', (string)($icons[0]['symbol_id'] ?? 'icon-id'));
+        $f3->set('exampleBaseClass', (string)$sprite['slug']);
         $f3->set('exampleClass', (string)$sprite['slug'] . '-' . (string)($icons[0]['symbol_id'] ?? 'icon-id'));
         $f3->set('content', 'sprite-edit.html');
 
@@ -323,24 +322,6 @@ final class SpriteController
         $baseUrl = rtrim((string)($config['app']['base_url'] ?? ''), '/');
 
         return ($baseUrl !== '' ? $baseUrl : '') . $path;
-    }
-
-    /**
-     * @param array<string, mixed> $config
-     * @param array<string, mixed> $sprite
-     * @param array<string, mixed> $font
-     */
-    private function fontAssetCdnUrl(array $config, array $sprite, array $font, string $extension): string
-    {
-        $hash = (string)($font[$extension . '_hash'] ?? '');
-        if (($font['status'] ?? '') !== 'ready' || $hash === '') {
-            return '';
-        }
-
-        return $this->absoluteUrl(
-            $config,
-            '/cdn/fonts/' . $sprite['public_hash'] . '/' . $hash . '.' . $extension
-        );
     }
 
 }

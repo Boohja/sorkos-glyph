@@ -109,6 +109,7 @@
 
     <check if="{{ @font.status == 'ready' }}">
       <true>
+        <p class="font-usage">Add the stylesheet, then use <code>&lt;i class=&quot;{{ @exampleBaseClass }} {{ @exampleClass }}&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;</code>.</p>
         <div class="font-ready-row">
           <div class="font-downloads">
             <a class="button button-primary" href="/api/sprites/{{ @sprite.public_hash }}/font.woff2">Download WOFF2 <small>{{ @font.woff2_size_label }}</small></a>
@@ -126,7 +127,7 @@
           </div>
           <div class="font-cdn-content" data-font-cdn-content <check if="{{ !@sprite.font_cdn_enabled }}">hidden</check>>
             <div class="font-cdn-block">
-            <p>The stylesheet loads the WOFF2 file from the CDN automatically. Use the direct font URLs when you need to write your own <code>@font-face</code> rule.</p>
+            <p>The stylesheet loads WOFF2 from the CDN and falls back to WOFF when needed.</p>
             <div class="font-cdn-row">
               <label class="cdn-link-field">
                 <span>Public stylesheet URL</span>
@@ -134,22 +135,7 @@
               </label>
               <button class="button button-secondary button-small" type="button" data-copy-target="font-css" data-copy-label="Copy URL">Copy URL</button>
             </div>
-            <div class="font-cdn-row">
-              <label class="cdn-link-field">
-                <span>Direct WOFF2 URL</span>
-                <input value="{{ @fontWoff2CdnUrl }}" readonly data-copy-value="font-woff2">
-              </label>
-              <button class="button button-secondary button-small" type="button" data-copy-target="font-woff2" data-copy-label="Copy URL">Copy URL</button>
             </div>
-            <div class="font-cdn-row">
-              <label class="cdn-link-field">
-                <span>Direct WOFF URL</span>
-                <input value="{{ @fontWoffCdnUrl }}" readonly data-copy-value="font-woff">
-              </label>
-              <button class="button button-secondary button-small" type="button" data-copy-target="font-woff" data-copy-label="Copy URL">Copy URL</button>
-            </div>
-            </div>
-            <p class="font-usage">Add the stylesheet, then use <code>&lt;i class=&quot;{{ @exampleClass }}&quot; aria-hidden=&quot;true&quot;&gt;&lt;/i&gt;</code>.</p>
           </div>
       </true>
       <false>
