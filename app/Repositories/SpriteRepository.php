@@ -52,7 +52,6 @@ final class SpriteRepository
      */
     public function create(int $userId, string $name, string $slug, string $description = ''): array
     {
-        $slug = $this->uniqueSlug($userId, $slug);
         $publicHash = $this->uniquePublicHash();
         $statement = $this->pdo->prepare(
             'INSERT INTO glyph_sprites (user_id, public_hash, name, slug, description, font_cdn_enabled)
@@ -99,7 +98,6 @@ final class SpriteRepository
 
     public function update(int $spriteId, int $userId, string $name, string $slug, ?string $description): void
     {
-        $slug = $this->uniqueSlug($userId, $slug, $spriteId);
         $statement = $this->pdo->prepare(
             'UPDATE glyph_sprites
              SET name = :name,
@@ -154,39 +152,6 @@ final class SpriteRepository
         $statement->execute([':id' => $spriteId, ':user_id' => $userId]);
     }
 
-    private function uniqueSlug(int $userId, string $baseSlug, ?int $ignoreSpriteId = null): string
-    {
-        $baseSlug = substr(trim($baseSlug, '-'), 0, 130);
-        if ($baseSlug === '') {
-            $baseSlug = 'sprite';
-        }
-
-        $candidate = $baseSlug;
-        $counter = 2;
-
-        while ($this->slugExists($userId, $candidate, $ignoreSpriteId)) {
-            $candidate = $baseSlug . '-' . $counter;
-            $counter++;
-        }
-
-        return $candidate;
-    }
-
-    private function slugExists(int $userId, string $slug, ?int $ignoreSpriteId): bool
-    {
-        $sql = 'SELECT COUNT(*) FROM glyph_sprites WHERE user_id = :user_id AND slug = :slug AND deleted_at IS NULL';
-        $params = [':user_id' => $userId, ':slug' => $slug];
-
-        if ($ignoreSpriteId !== null) {
-            $sql .= ' AND id <> :ignore_id';
-            $params[':ignore_id'] = $ignoreSpriteId;
-        }
-
-        $statement = $this->pdo->prepare($sql);
-        $statement->execute($params);
-
-        return (int)$statement->fetchColumn() > 0;
-    }
 
     private function uniquePublicHash(): string
     {
