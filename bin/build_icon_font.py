@@ -10,7 +10,8 @@ from pathlib import Path
 from xml.etree import ElementTree
 
 from fontTools.fontBuilder import FontBuilder
-from fontTools.pens.t2CharStringPen import T2CharStringPen
+from fontTools.pens.cu2quPen import Cu2QuPen
+from fontTools.pens.ttGlyphPen import TTGlyphPen
 from fontTools.svgLib.path import SVGPath
 
 
@@ -93,10 +94,10 @@ def build(payload: dict, output_dir: Path) -> None:
     glyph_order = [".notdef"]
     cmap: dict[int, str] = {}
     metrics = {".notdef": (UNITS_PER_EM, 0)}
-    char_strings = {}
+    glyphs = {}
 
-    empty_pen = T2CharStringPen(UNITS_PER_EM, None)
-    char_strings[".notdef"] = empty_pen.getCharString()
+    empty_pen = TTGlyphPen(None)
+    glyphs[".notdef"] = empty_pen.glyph()
 
     for icon in icons:
         glyph_name = f"icon{int(icon['id'])}"
@@ -115,16 +116,18 @@ def build(payload: dict, output_dir: Path) -> None:
             y_bottom + (min_y + height) * scale,
         )
         svg = f'<svg xmlns="http://www.w3.org/2000/svg">{icon["symbol_markup"]}</svg>'
-        pen = T2CharStringPen(UNITS_PER_EM, None)
-        SVGPath.fromstring(svg, transform=transform).draw(pen)
-        char_strings[glyph_name] = pen.getCharString()
+        glyph_pen = TTGlyphPen(None)
+        outline_pen = Cu2QuPen(glyph_pen, max_err=1.0, reverse_direction=False)
+        SVGPath.fromstring(svg, transform=transform).draw(outline_pen)
+        glyphs[glyph_name] = glyph_pen.glyph()
         glyph_order.append(glyph_name)
         cmap[int(icon["codepoint"])] = glyph_name
         metrics[glyph_name] = (UNITS_PER_EM, 0)
 
-    builder = FontBuilder(UNITS_PER_EM, isTTF=False)
+    builder = FontBuilder(UNITS_PER_EM, isTTF=True)
     builder.setupGlyphOrder(glyph_order)
     builder.setupCharacterMap(cmap)
+    builder.setupGlyf(glyphs)
     builder.setupHorizontalMetrics(metrics)
     builder.setupHorizontalHeader(ascent=ASCENT, descent=DESCENT)
     builder.setupNameTable({
@@ -144,12 +147,7 @@ def build(payload: dict, output_dir: Path) -> None:
         sCapHeight=800,
     )
     builder.setupPost(keepGlyphNames=False)
-    builder.setupCFF(
-        f"{ps_name}-Regular",
-        {"FullName": f"{family} Regular", "FamilyName": family, "Weight": "Regular"},
-        char_strings,
-        {},
-    )
+    builder.setupMaxp()
     builder.font.recalcTimestamp = False
     builder.font["head"].created = DETERMINISTIC_FONT_TIMESTAMP
     builder.font["head"].modified = DETERMINISTIC_FONT_TIMESTAMP
