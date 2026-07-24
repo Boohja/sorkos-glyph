@@ -18,6 +18,10 @@ UNITS_PER_EM = 1000
 ASCENT = 900
 DESCENT = -100
 DRAWING_SIZE = 800
+# FontTools otherwise stamps the OpenType head table with the build time. These
+# files are content-addressed, so identical icon data must produce identical
+# hashes on every server.
+DETERMINISTIC_FONT_TIMESTAMP = 2082844800  # 1970-01-01 in the OpenType epoch.
 
 
 def local_name(tag: str) -> str:
@@ -146,6 +150,9 @@ def build(payload: dict, output_dir: Path) -> None:
         char_strings,
         {},
     )
+    builder.font.recalcTimestamp = False
+    builder.font["head"].created = DETERMINISTIC_FONT_TIMESTAMP
+    builder.font["head"].modified = DETERMINISTIC_FONT_TIMESTAMP
 
     output_dir.mkdir(parents=True, exist_ok=True)
     builder.font.flavor = "woff2"

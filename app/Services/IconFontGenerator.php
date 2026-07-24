@@ -9,7 +9,7 @@ use App\Repositories\IconRepository;
 
 final class IconFontGenerator
 {
-    public const BUILDER_VERSION = 'icon-font-v2';
+    public const BUILDER_VERSION = 'icon-font-v3';
 
     /** @param array<string, mixed> $config */
     public function __construct(
@@ -121,6 +121,24 @@ final class IconFontGenerator
         }
 
         return $this->storageRoot() . '/' . substr($hash, 0, 2) . '/' . $hash . '.' . $extension;
+    }
+
+    /** @param array<string, mixed> $artifact */
+    public function artifactsExist(array $artifact): bool
+    {
+        if (($artifact['status'] ?? '') !== 'ready') {
+            return false;
+        }
+
+        foreach (['woff2', 'woff'] as $extension) {
+            $hash = (string)($artifact[$extension . '_hash'] ?? '');
+            $path = $this->artifactPath($hash, $extension);
+            if ($path === '' || !is_file($path)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /** @param array<string, mixed> $sprite */

@@ -54,10 +54,12 @@ final class SpriteController
         $config = $f3->get('CONFIG');
         $artifactRepo = $this->artifacts($f3);
         $font = $artifactRepo->findForSprite($spriteId);
+        $fontGenerator = $this->fontGenerator($f3);
         if ($icons !== [] && ($font === null
             || (int)$font['source_version'] !== (int)$sprite['public_version']
-            || (string)$font['builder_version'] !== IconFontGenerator::BUILDER_VERSION)) {
-            $this->fontGenerator($f3)->generate($sprite);
+            || (string)$font['builder_version'] !== IconFontGenerator::BUILDER_VERSION
+            || (($font['status'] ?? '') === 'ready' && !$fontGenerator->artifactsExist($font)))) {
+            $fontGenerator->generate($sprite);
             $font = $artifactRepo->findForSprite($spriteId);
         }
 

@@ -144,7 +144,10 @@
             <div class="font-error" role="status">
               <div>
                 <strong>{{ @font.error.message }}</strong>
-                <p>The SVG icons remain saved. Fix the listed outlines and retry generation.</p>
+                <check if="{{ count(@fontProblemIcons) }}">
+                  <true><p>The SVG icons remain saved. Fix the listed outlines and retry generation.</p></true>
+                  <false><p>The SVG icons remain saved. Retry generation; if it fails again, check the server-side font builder.</p></false>
+                </check>
               </div>
               <form method="post" action="/sprites/{{ @sprite.public_hash }}/font/retry#font">
                 <input type="hidden" name="csrf_token" value="{{ @csrfToken }}">
