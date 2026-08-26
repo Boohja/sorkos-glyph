@@ -639,6 +639,10 @@ main {
 }
 
 .editor-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   min-width: 96px;
   min-height: 44px;
   border: 0;
@@ -649,6 +653,20 @@ main {
   font: inherit;
   font-weight: 800;
   cursor: pointer;
+}
+
+.editor-tab-error-count {
+  display: inline-grid;
+  min-width: 18px;
+  height: 18px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--danger-soft);
+  padding: 0 5px;
+  color: var(--danger);
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
 }
 
 .editor-tab:hover:not(:disabled),
