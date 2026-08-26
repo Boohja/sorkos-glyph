@@ -13,12 +13,39 @@
 
   <div class="editor-workflow">
     <section class="editor-panel editor-panel-compact upload-panel">
-      <label class="dropzone" data-saved-dropzone>
-        <input type="file" accept=".svg,image/svg+xml" multiple data-saved-file-input aria-label="Choose SVG files">
+      <div class="dropzone" data-saved-dropzone>
+        <input id="saved-svg-files" type="file" accept=".svg,image/svg+xml" multiple data-saved-file-input aria-label="Choose SVG files">
         <strong>Drop SVGs here to add icons</strong>
-        <span>or choose files</span>
-      </label>
+        <div class="dropzone-actions">
+          <label for="saved-svg-files">choose files</label>
+          <span aria-hidden="true">or</span>
+          <button class="dropzone-text-button" type="button" data-show-add-svg>enter SVG</button>
+        </div>
+      </div>
       <div class="status-line" data-saved-status aria-live="polite"></div>
+
+      <div class="icon-source-dialog" role="dialog" aria-modal="true" aria-labelledby="add-svg-title" data-add-svg-dialog hidden>
+        <div class="icon-source-dialog-surface">
+          <div class="icon-source-dialog-heading">
+            <strong id="add-svg-title">Enter SVG</strong>
+            <button class="button button-plain icon-dialog-close" type="button" data-close-add-svg aria-label="Close SVG entry">&times;</button>
+          </div>
+          <textarea
+            class="icon-source-editor"
+            data-add-svg-editor
+            aria-label="SVG source"
+            placeholder="&lt;svg viewBox=&quot;0 0 24 24&quot;&gt;&#10;  ...&#10;&lt;/svg&gt;"
+            spellcheck="false"
+          ></textarea>
+          <div class="icon-source-dialog-footer">
+            <span class="icon-source-status" data-add-svg-status role="status" aria-live="polite"></span>
+            <div class="icon-source-dialog-actions">
+              <button class="button button-secondary" type="button" data-close-add-svg>Cancel</button>
+              <button class="button button-primary" type="button" data-save-add-svg disabled>Add icon</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <section class="editor-panel editor-panel-compact settings-panel" aria-labelledby="sprite-settings-title">

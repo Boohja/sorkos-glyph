@@ -755,10 +755,47 @@ main {
   min-height: 100%;
   margin-top: 0;
   padding: 20px;
+  cursor: pointer;
 }
 
 .editor-shell .dropzone strong {
   font-size: 1.05rem;
+}
+
+.dropzone-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--muted);
+}
+
+.dropzone-actions label,
+.dropzone-text-button {
+  border: 0;
+  background: transparent;
+  padding: 2px;
+  color: var(--muted);
+  font: inherit;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--muted) 45%, transparent);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.dropzone-actions label:hover,
+.dropzone-actions label:focus-visible,
+.dropzone-text-button:hover,
+.dropzone-text-button:focus-visible {
+  color: var(--primary);
+  text-decoration-color: currentColor;
+}
+
+.dropzone-actions label:focus-visible,
+.dropzone-text-button:focus-visible {
+  border-radius: 4px;
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
 .icons-panel {
@@ -1878,6 +1915,11 @@ main {
   .icon-source-dialog-footer,
   .icon-source-dialog-actions {
     width: 100%;
+  }
+
+  .icon-source-dialog-heading .icon-dialog-close {
+    width: 32px;
+    flex: 0 0 32px;
   }
 
   .icon-source-dialog-footer {

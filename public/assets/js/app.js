@@ -579,6 +579,11 @@
   var fontCdnToggle = editor.querySelector('[data-font-cdn-toggle]');
   var fontCdnContent = editor.querySelector('[data-font-cdn-content]');
   var fontCdnStatus = editor.querySelector('[data-font-cdn-status]');
+  var addSvgTrigger = editor.querySelector('[data-show-add-svg]');
+  var addSvgDialog = editor.querySelector('[data-add-svg-dialog]');
+  var addSvgEditor = editor.querySelector('[data-add-svg-editor]');
+  var addSvgSave = editor.querySelector('[data-save-add-svg]');
+  var addSvgStatus = editor.querySelector('[data-add-svg-status]');
 
   editorTabs.forEach(function (tab) {
     tab.addEventListener('click', function () {
@@ -614,6 +619,14 @@
   window.addEventListener('hashchange', activateTabFromHash);
 
   if (dropzone && fileInput) {
+    dropzone.addEventListener('click', function (event) {
+      if (event.target.closest('[data-show-add-svg]') || event.target.closest('label[for="saved-svg-files"]')) {
+        return;
+      }
+
+      fileInput.click();
+    });
+
     dropzone.addEventListener('dragover', function (event) {
       event.preventDefault();
       dropzone.classList.add('is-dragover');
@@ -632,6 +645,66 @@
     fileInput.addEventListener('change', function () {
       uploadSavedIcons(fileInput.files);
       fileInput.value = '';
+    });
+  }
+
+  if (addSvgTrigger && addSvgDialog && addSvgEditor && addSvgSave) {
+    addSvgTrigger.addEventListener('click', function () {
+      addSvgDialog._glyphTrigger = addSvgTrigger;
+      addSvgDialog.hidden = false;
+      addSvgEditor.focus();
+    });
+
+    addSvgEditor.addEventListener('input', function () {
+      addSvgSave.disabled = addSvgEditor.value.trim() === '';
+      setIconSourceStatus(addSvgStatus, '');
+    });
+
+    addSvgSave.addEventListener('click', function () {
+      var source = addSvgEditor.value.trim();
+      if (source === '') {
+        setIconSourceStatus(addSvgStatus, 'Paste an SVG before adding it.', true);
+        addSvgEditor.focus();
+        return;
+      }
+
+      var file = new File([source], 'pasted-svg.svg', { type: 'image/svg+xml' });
+      addSvgSave.disabled = true;
+      addSvgEditor.disabled = true;
+      setIconSourceStatus(addSvgStatus, 'Adding...');
+
+      submitSavedIcons([file]).then(function (data) {
+        if (data.added > 0) {
+          window.location.reload();
+          return;
+        }
+
+        throw new Error(savedIconError(data));
+      }).catch(function (error) {
+        setIconSourceStatus(addSvgStatus, error.message || 'Could not add this SVG.', true);
+        addSvgSave.disabled = false;
+        addSvgEditor.disabled = false;
+        addSvgEditor.focus();
+      });
+    });
+
+    editor.querySelectorAll('[data-close-add-svg]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        closeAddSvgDialog();
+      });
+    });
+
+    addSvgDialog.addEventListener('click', function (event) {
+      if (event.target === addSvgDialog) {
+        closeAddSvgDialog();
+      }
+    });
+
+    addSvgDialog.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeAddSvgDialog();
+      }
     });
   }
 
@@ -888,24 +961,39 @@
       return;
     }
 
+    setSavedStatus('');
+
+    submitSavedIcons(files).then(function (data) {
+      if (data.added > 0) {
+        window.location.reload();
+        return;
+      }
+
+      setSavedStatus(savedIconError(data), true);
+    }).catch(function (error) {
+      setSavedStatus(error.message || 'Could not add icons. Try again.', true);
+    });
+  }
+
+  function submitSavedIcons(files) {
     var formData = new FormData();
     formData.append('csrf_token', csrfToken);
     files.forEach(function (file) {
       formData.append('icons[]', file);
     });
 
-    setSavedStatus('');
+    return postForm('/api/sprites/' + spriteRef + '/icons', formData);
+  }
 
-    postForm('/api/sprites/' + spriteRef + '/icons', formData).then(function (data) {
-      if (data.added > 0) {
-        window.location.reload();
-        return;
-      }
-
-      setSavedStatus('No icons added. Check the SVG files and try again.', true);
-    }).catch(function (error) {
-      setSavedStatus(error.message || 'Could not add icons. Try again.', true);
+  function savedIconError(data) {
+    var messages = [];
+    (data.icons || []).forEach(function (icon) {
+      (icon.errors || []).forEach(function (message) {
+        messages.push(String(message));
+      });
     });
+
+    return messages.join(' ') || 'No icons added. Check the SVG and try again.';
   }
 
   function postForm(url, formData) {
@@ -1034,6 +1122,20 @@
     dialog.hidden = true;
     if (dialog._glyphTrigger) {
       dialog._glyphTrigger.focus();
+    }
+  }
+
+  function closeAddSvgDialog() {
+    if (!addSvgDialog || !addSvgEditor || addSvgEditor.disabled) {
+      return;
+    }
+
+    addSvgDialog.hidden = true;
+    addSvgEditor.value = '';
+    addSvgSave.disabled = true;
+    setIconSourceStatus(addSvgStatus, '');
+    if (addSvgDialog._glyphTrigger) {
+      addSvgDialog._glyphTrigger.focus();
     }
   }
 
