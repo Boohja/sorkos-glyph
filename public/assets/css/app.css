@@ -1326,6 +1326,202 @@ main {
   align-items: center;
 }
 
+.font-preview {
+  display: grid;
+  gap: 12px;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+
+.font-preview-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.font-preview-heading h3,
+.font-preview-heading p {
+  margin: 0;
+}
+
+.font-preview-heading h3 {
+  font-size: 1rem;
+}
+
+.font-preview-heading p {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.font-debug-toggle {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.font-debug-toggle input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--primary);
+}
+
+.font-preview-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px 14px;
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.font-preview-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.font-preview-legend span::before {
+  width: 16px;
+  border-top: 2px solid;
+  content: "";
+}
+
+.font-preview-legend .is-advance::before {
+  border-color: oklch(60% 0.19 252);
+}
+
+.font-preview-legend .is-center::before {
+  border-color: oklch(61% 0.16 151);
+}
+
+.font-preview-legend .is-baseline::before {
+  border-color: oklch(57% 0.21 27);
+}
+
+.font-preview-legend .is-extents::before {
+  border-color: oklch(65% 0.17 70);
+  border-top-style: dashed;
+}
+
+.font-preview-stage {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  gap: 8px;
+  list-style: none;
+}
+
+.font-preview-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.font-preview-frame {
+  position: relative;
+  display: grid;
+  min-height: 88px;
+  place-items: center;
+  overflow: hidden;
+  background: var(--panel-muted);
+}
+
+.font-preview-frame > i {
+  position: relative;
+  z-index: 1;
+  color: var(--text);
+  font-size: 56px;
+}
+
+.font-metrics {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  left: 50%;
+  display: none;
+  width: 56px;
+  height: 56px;
+  border: 1px solid oklch(60% 0.19 252 / 0.9);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.font-preview-stage.is-debug .font-metrics {
+  display: block;
+}
+
+.font-metrics > span {
+  position: absolute;
+  display: block;
+}
+
+.font-metric-center-x {
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  border-left: 1px solid oklch(61% 0.16 151 / 0.78);
+}
+
+.font-metric-center-y {
+  top: 50%;
+  right: 0;
+  left: 0;
+  border-top: 1px solid oklch(61% 0.16 151 / 0.78);
+}
+
+.font-metric-baseline {
+  z-index: 1;
+  top: 90%;
+  right: -5px;
+  left: -5px;
+  border-top: 2px solid oklch(57% 0.21 27 / 0.92);
+}
+
+.font-metric-ascender,
+.font-metric-descender {
+  right: -3px;
+  left: -3px;
+  border-top: 2px dashed oklch(65% 0.17 70 / 0.92);
+}
+
+.font-metric-ascender {
+  top: -1px;
+}
+
+.font-metric-descender {
+  bottom: -1px;
+}
+
+.font-preview-meta {
+  display: grid;
+  gap: 1px;
+  border-top: 1px solid var(--border);
+  padding: 7px 8px 8px;
+}
+
+.font-preview-meta code {
+  overflow: hidden;
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.font-preview-meta span {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+}
+
 .font-cdn-control {
   display: flex;
   min-height: 42px;

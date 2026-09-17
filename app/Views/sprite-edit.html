@@ -151,6 +151,45 @@
           </div>
           <p class="font-meta">Generated {{ @font.generated_at }} · prefix <code>{{ @sprite.slug }}-</code></p>
         </div>
+          <section class="font-preview" aria-labelledby="font-preview-title">
+            <style>{{ @fontPreviewCss | raw }}</style>
+            <div class="font-preview-heading">
+              <div>
+                <h3 id="font-preview-title">Font preview</h3>
+                <p>Rendered with the generated font and CSS classes.</p>
+              </div>
+              <label class="font-debug-toggle">
+                <input type="checkbox" data-font-preview-debug aria-controls="font-preview-grid font-preview-legend">
+                <span>Show metrics</span>
+              </label>
+            </div>
+            <div class="font-preview-legend" id="font-preview-legend" data-font-preview-legend hidden>
+              <span class="is-advance">Advance / em box</span>
+              <span class="is-center">Center</span>
+              <span class="is-baseline">Baseline</span>
+              <span class="is-extents">Ascender / descender</span>
+            </div>
+            <ul class="font-preview-stage" id="font-preview-grid" data-font-preview-stage>
+              <repeat group="{{ @icons }}" value="{{ @icon }}">
+                <li class="font-preview-card">
+                  <div class="font-preview-frame">
+                    <i class="{{ @sprite.slug }} {{ @sprite.slug }}-{{ @icon.symbol_id }}" aria-hidden="true"></i>
+                    <span class="font-metrics" aria-hidden="true">
+                      <span class="font-metric-center-x"></span>
+                      <span class="font-metric-center-y"></span>
+                      <span class="font-metric-baseline"></span>
+                      <span class="font-metric-ascender"></span>
+                      <span class="font-metric-descender"></span>
+                    </span>
+                  </div>
+                  <div class="font-preview-meta">
+                    <code>{{ @icon.symbol_id }}</code>
+                    <span>{{ @icon.codepoint_label }}</span>
+                  </div>
+                </li>
+              </repeat>
+            </ul>
+          </section>
           <div class="font-cdn-control">
             <label>
               <input type="checkbox" data-font-cdn-toggle <check if="{{ @sprite.font_cdn_enabled }}">checked</check>>

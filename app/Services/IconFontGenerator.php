@@ -9,7 +9,7 @@ use App\Repositories\IconRepository;
 
 final class IconFontGenerator
 {
-    public const BUILDER_VERSION = 'icon-font-v4';
+    public const BUILDER_VERSION = 'icon-font-v5';
 
     /** @param array<string, mixed> $config */
     public function __construct(

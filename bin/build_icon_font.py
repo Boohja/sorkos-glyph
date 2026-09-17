@@ -10,6 +10,7 @@ from pathlib import Path
 from xml.etree import ElementTree
 
 from fontTools.fontBuilder import FontBuilder
+from fontTools.pens.boundsPen import BoundsPen
 from fontTools.pens.cu2quPen import Cu2QuPen
 from fontTools.pens.ttGlyphPen import TTGlyphPen
 from fontTools.svgLib.path import SVGPath
@@ -19,6 +20,8 @@ UNITS_PER_EM = 1000
 ASCENT = 900
 DESCENT = -100
 DRAWING_SIZE = 800
+EM_CENTER_X = UNITS_PER_EM / 2
+EM_CENTER_Y = (ASCENT + DESCENT) / 2
 # FontTools otherwise stamps the OpenType head table with the build time. These
 # files are content-addressed, so identical icon data must produce identical
 # hashes on every server.
@@ -74,6 +77,36 @@ def parse_view_box(value: str) -> tuple[float, float, float, float]:
     return numbers[0], numbers[1], numbers[2], numbers[3]
 
 
+def icon_transform(svg: str, view_box: str) -> tuple[float, float, float, float, float, float]:
+    """Scale by the viewBox, then center the visible outline in the em box.
+
+    Using the viewBox for scale preserves intentional padding and relative icon
+    sizes. Using the outline bounds only for translation removes asymmetric
+    whitespace from the visual centering calculation.
+    """
+    min_x, min_y, width, height = parse_view_box(view_box)
+    scale = DRAWING_SIZE / max(width, height)
+
+    bounds_pen = BoundsPen(None)
+    SVGPath.fromstring(svg).draw(bounds_pen)
+    if bounds_pen.bounds is None:
+        center_x = min_x + width / 2
+        center_y = min_y + height / 2
+    else:
+        x_min, y_min, x_max, y_max = bounds_pen.bounds
+        center_x = (x_min + x_max) / 2
+        center_y = (y_min + y_max) / 2
+
+    return (
+        scale,
+        0,
+        0,
+        -scale,
+        EM_CENTER_X - center_x * scale,
+        EM_CENTER_Y + center_y * scale,
+    )
+
+
 def build(payload: dict, output_dir: Path) -> None:
     icons = payload.get("icons") or []
     failures = []
@@ -101,28 +134,18 @@ def build(payload: dict, output_dir: Path) -> None:
 
     for icon in icons:
         glyph_name = f"icon{int(icon['id'])}"
-        min_x, min_y, width, height = parse_view_box(str(icon["view_box"]))
-        scale = DRAWING_SIZE / max(width, height)
-        scaled_width = width * scale
-        scaled_height = height * scale
-        x_left = (UNITS_PER_EM - scaled_width) / 2
-        y_bottom = 100 + (DRAWING_SIZE - scaled_height) / 2
-        transform = (
-            scale,
-            0,
-            0,
-            -scale,
-            x_left - min_x * scale,
-            y_bottom + (min_y + height) * scale,
-        )
         svg = f'<svg xmlns="http://www.w3.org/2000/svg">{icon["symbol_markup"]}</svg>'
+        transform = icon_transform(svg, str(icon["view_box"]))
         glyph_pen = TTGlyphPen(None)
         outline_pen = Cu2QuPen(glyph_pen, max_err=1.0, reverse_direction=False)
         SVGPath.fromstring(svg, transform=transform).draw(outline_pen)
-        glyphs[glyph_name] = glyph_pen.glyph()
+        glyph = glyph_pen.glyph()
+        glyphs[glyph_name] = glyph
         glyph_order.append(glyph_name)
         cmap[int(icon["codepoint"])] = glyph_name
-        metrics[glyph_name] = (UNITS_PER_EM, 0)
+        coordinates = getattr(glyph, "coordinates", ())
+        left_side_bearing = min((point[0] for point in coordinates), default=0)
+        metrics[glyph_name] = (UNITS_PER_EM, left_side_bearing)
 
     builder = FontBuilder(UNITS_PER_EM, isTTF=True)
     builder.setupGlyphOrder(glyph_order)

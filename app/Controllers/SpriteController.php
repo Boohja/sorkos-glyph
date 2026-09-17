@@ -11,6 +11,7 @@ use App\Repositories\UserRepository;
 use App\Services\AuthService;
 use App\Services\CsrfService;
 use App\Services\Database;
+use App\Services\IconFontCssBuilder;
 use App\Services\IconFontGenerator;
 use App\Services\SlugService;
 use Base;
@@ -74,6 +75,16 @@ final class SpriteController
         $f3->set('font', $preparedFont);
         $f3->set('fontProblemIcons', $this->fontProblemIcons($icons, $preparedFont));
         $f3->set('fontCdnUrl', $this->absoluteUrl($config, '/cdn/fonts/' . $sprite['public_hash'] . '.css'));
+        $fontBaseUrl = '/api/sprites/' . $sprite['public_hash'] . '/font';
+        $f3->set('fontPreviewCss', ($preparedFont['status'] ?? '') === 'ready'
+            ? (new IconFontCssBuilder())->build(
+                $sprite,
+                $icons,
+                $fontBaseUrl . '.woff2',
+                $fontBaseUrl . '.woff',
+                '.font-preview-stage'
+            )
+            : '');
         $f3->set('exampleSymbolId', (string)($icons[0]['symbol_id'] ?? 'icon-id'));
         $f3->set('exampleBaseClass', (string)$sprite['slug']);
         $f3->set('exampleClass', (string)$sprite['slug'] . '-' . (string)($icons[0]['symbol_id'] ?? 'icon-id'));
@@ -215,6 +226,7 @@ final class SpriteController
             . (string)$icon['view_box'] . '">' . "\n  "
             . trim((string)$icon['symbol_markup']) . "\n</svg>";
         $icon['svg_source_escaped'] = htmlspecialchars($svgSource, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $icon['codepoint_label'] = sprintf('U+%04X', (int)$icon['codepoint']);
 
         return $icon;
     }

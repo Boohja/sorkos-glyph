@@ -579,6 +579,9 @@
   var fontCdnToggle = editor.querySelector('[data-font-cdn-toggle]');
   var fontCdnContent = editor.querySelector('[data-font-cdn-content]');
   var fontCdnStatus = editor.querySelector('[data-font-cdn-status]');
+  var fontPreviewDebug = editor.querySelector('[data-font-preview-debug]');
+  var fontPreviewStage = editor.querySelector('[data-font-preview-stage]');
+  var fontPreviewLegend = editor.querySelector('[data-font-preview-legend]');
   var addSvgTrigger = editor.querySelector('[data-show-add-svg]');
   var addSvgDialog = editor.querySelector('[data-add-svg-dialog]');
   var addSvgEditor = editor.querySelector('[data-add-svg-editor]');
@@ -786,6 +789,16 @@
       }).finally(function () {
         fontCdnToggle.disabled = false;
       });
+    });
+  }
+
+  if (fontPreviewDebug && fontPreviewStage) {
+    fontPreviewDebug.addEventListener('change', function () {
+      var enabled = fontPreviewDebug.checked;
+      fontPreviewStage.classList.toggle('is-debug', enabled);
+      if (fontPreviewLegend) {
+        fontPreviewLegend.hidden = !enabled;
+      }
     });
   }
 

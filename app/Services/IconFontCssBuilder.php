@@ -7,16 +7,19 @@ namespace App\Services;
 final class IconFontCssBuilder
 {
     /** @param array<int, array<string, mixed>> $icons */
-    public function build(array $sprite, array $icons, string $woff2Url, string $woffUrl): string
+    public function build(array $sprite, array $icons, string $woff2Url, string $woffUrl, string $selectorScope = ''): string
     {
         $prefix = (string)$sprite['slug'];
         $family = 'Glyph-' . substr((string)$sprite['public_hash'], 0, 12);
+        $scope = trim($selectorScope);
+        $scopePrefix = $scope === '' ? '' : $scope . ' ';
         $mappings = [];
 
         foreach ($icons as $icon) {
             $className = $prefix . '-' . (string)$icon['symbol_id'];
             $mappings[] = sprintf(
-                ".%s::before { content: \"\\%x\"; }",
+                "%s.%s::before { content: \"\\%x\"; }",
+                $scopePrefix,
                 $className,
                 (int)$icon['codepoint']
             );
@@ -29,7 +32,7 @@ final class IconFontCssBuilder
         $css .= "  font-style: normal;\n  font-weight: normal;\n  font-display: block;\n}\n\n";
 
         if ($mappings !== []) {
-            $css .= ".{$prefix} {\n";
+            $css .= "{$scopePrefix}.{$prefix} {\n";
             $css .= "  display: inline-block;\n  font-family: \"{$family}\" !important;\n";
             $css .= "  font-style: normal;\n  font-weight: normal;\n  font-variant: normal;\n";
             $css .= "  line-height: 1;\n  speak: never;\n  text-rendering: auto;\n  text-transform: none;\n";
