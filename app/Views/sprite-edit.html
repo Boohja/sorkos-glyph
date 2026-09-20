@@ -149,7 +149,13 @@
             <a class="button button-secondary" href="/api/sprites/{{ @sprite.public_hash }}/font.woff">WOFF <small>{{ @font.woff_size_label }}</small></a>
             <a class="button button-secondary" href="/api/sprites/{{ @sprite.public_hash }}/font.css">CSS</a>
           </div>
-          <p class="font-meta">Generated {{ @font.generated_at }} · prefix <code>{{ @sprite.slug }}-</code></p>
+          <div class="font-meta-actions">
+            <p class="font-meta">Generated {{ @font.generated_at }} · prefix <code>{{ @sprite.slug }}-</code></p>
+            <form class="inline-form" method="post" action="/sprites/{{ @sprite.public_hash }}/font/retry#font">
+              <input type="hidden" name="csrf_token" value="{{ @csrfToken }}">
+              <button class="font-regenerate" type="submit">Regenerate</button>
+            </form>
+          </div>
         </div>
           <section class="font-preview" aria-labelledby="font-preview-title">
             <style>{{ @fontPreviewCss | raw }}</style>

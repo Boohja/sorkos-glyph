@@ -76,12 +76,14 @@ final class SpriteController
         $f3->set('fontProblemIcons', $this->fontProblemIcons($icons, $preparedFont));
         $f3->set('fontCdnUrl', $this->absoluteUrl($config, '/cdn/fonts/' . $sprite['public_hash'] . '.css'));
         $fontBaseUrl = '/api/sprites/' . $sprite['public_hash'] . '/font';
+        $woff2Version = rawurlencode((string)($preparedFont['woff2_hash'] ?? ''));
+        $woffVersion = rawurlencode((string)($preparedFont['woff_hash'] ?? ''));
         $f3->set('fontPreviewCss', ($preparedFont['status'] ?? '') === 'ready'
             ? (new IconFontCssBuilder())->build(
                 $sprite,
                 $icons,
-                $fontBaseUrl . '.woff2',
-                $fontBaseUrl . '.woff',
+                $fontBaseUrl . '.woff2?v=' . $woff2Version,
+                $fontBaseUrl . '.woff?v=' . $woffVersion,
                 '.font-preview-stage'
             )
             : '');

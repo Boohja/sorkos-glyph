@@ -1582,6 +1582,38 @@ main {
   font-size: 0.85rem;
 }
 
+.font-meta-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px 10px;
+}
+
+.font-regenerate {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: var(--primary-hover);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.font-regenerate:hover {
+  color: var(--primary);
+}
+
+.font-regenerate:focus-visible {
+  border-radius: 3px;
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
 .font-cdn-block {
   display: grid;
   gap: 12px;
