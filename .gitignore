@@ -1,5 +1,6 @@
 /config/app.php
 /config/db.php
+/last-build.json
 /storage/cache/*
 /storage/logs/*
 /storage/fonts/*

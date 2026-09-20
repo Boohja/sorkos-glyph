@@ -1961,14 +1961,26 @@ main {
 }
 
 .site-footer-inner {
-  display: flex;
+  display: grid;
   width: min(1120px, calc(100% - 32px));
   min-height: 74px;
   align-items: center;
-  justify-content: space-between;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   gap: 16px;
   margin-inline: auto;
   padding: 14px 0;
+}
+
+.footer-version {
+  justify-self: center;
+  color: oklch(68% 0.025 276);
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.footer-spacer {
+  min-width: 0;
 }
 
 .site-footer a {
@@ -2071,6 +2083,10 @@ main {
   .site-footer-inner,
   .tool-header {
     flex-direction: column;
+  }
+
+  .site-footer-inner {
+    align-items: center;
   }
 
   .dashboard-heading,
@@ -2193,5 +2209,17 @@ main {
 
   .preview-panel pre {
     min-height: 220px;
+  }
+}
+
+@media (max-width: 480px) {
+  .site-footer-inner {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: 8px;
+  }
+
+  .footer-spacer {
+    display: none;
   }
 }

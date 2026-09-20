@@ -12,7 +12,7 @@
   <meta name="theme-color" content="#7C5CFF">
   <meta property="og:title" content="{{ @title }}">
   <meta property="og:image" content="/assets/favicon/og.png">
-  <link rel="stylesheet" href="/assets/css/app.css?v=20260920-font-preview-refresh">
+  <link rel="stylesheet" href="/assets/css/app.css?v=20260920-build-version-2">
 </head>
 <body>
   <header class="site-header">
@@ -60,6 +60,10 @@
   <footer class="site-footer">
     <div class="site-footer-inner">
       <span>&copy; {{ date('Y') }} by <a class="footer-logo-link" href="https://sorkos.net" aria-label="sorkos.net"><img class="footer-logo" src="/assets/logo/sorkos_dark_small.svg" alt="sorkos.net"></a></span>
+      <check if="{{ @BUILD_VERSION }}">
+        <span class="footer-version" aria-label="Build version {{ @BUILD_VERSION }}">v{{ @BUILD_VERSION }}</span>
+      </check>
+      <span class="footer-spacer" aria-hidden="true"></span>
     </div>
   </footer>
 

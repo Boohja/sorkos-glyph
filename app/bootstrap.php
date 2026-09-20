@@ -40,6 +40,17 @@ $f3->set('DB_CONFIG', $dbConfig);
 $f3->set('SETUP_WARNING', !is_file($appConfigPath) || !is_file($dbConfigPath));
 $f3->set('DEBUG', !empty($appConfig['app']['debug']) ? 3 : 0);
 
+$buildVersion = null;
+$buildMetadataPath = $root . '/last-build.json';
+if (is_file($buildMetadataPath)) {
+    $buildMetadata = json_decode((string)@file_get_contents($buildMetadataPath), true);
+    $candidateVersion = is_array($buildMetadata) ? trim((string)($buildMetadata['version'] ?? '')) : '';
+    if (preg_match('/^\d+\.\d{3}(?:\.\d+)?$/', $candidateVersion) === 1) {
+        $buildVersion = $candidateVersion;
+    }
+}
+$f3->set('BUILD_VERSION', $buildVersion);
+
 $requestPath = (string)(parse_url((string)($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH) ?: '/');
 $isPublicFontRequest = ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET'
     && preg_match('#^/cdn/fonts/[A-Za-z0-9]{32,128}(?:\.css|/[a-f0-9]{64}\.(?:woff2?|woff))$#', $requestPath) === 1;
